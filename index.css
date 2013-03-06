@@ -1,0 +1,53 @@
+.dialer-button {
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Dialpad
+----------------------------------------------------------------------------- */
+.dialer-dialpad {
+  position: relative;
+  height: 280px;
+}
+
+/* Compromising between flexibility and layout efficiency, I am absolutely
+positioning the dialer buttons against a fixed-height dialpad, rather than
+floating or using a table. This gives us flexible width, but will have to
+account for height with media queries if supporting multiple res. */
+.dialer-dialpad-col1 {
+  left: 0;
+}
+.dialer-dialpad-col2 {
+  left: 33.33%;
+}
+.dialer-dialpad-col3 {
+  left: 66.66%;
+}
+.dialer-dialpad-row1 {
+  top: 0;
+}
+.dialer-dialpad-row2 {
+  top: 25%;
+}
+.dialer-dialpad-row3 {
+  top: 50%;
+}
+.dialer-dialpad-row4 {
+  top: 75%;
+}
+
+.dialer-button {
+  border: 1px solid #111;
+  position: absolute;
+  display: block;
+  height: 25%;
+  width: 33.33%;
+}
+
+/* Nuke the inner spacing that Gecko puts into button elements. */
+.dialer-button::-moz-focus-inner {
+    padding: 0;
+    border: 0
+}

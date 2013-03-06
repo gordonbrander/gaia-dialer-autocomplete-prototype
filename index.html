@@ -7,25 +7,30 @@
 	<meta charset="utf-8">
 	<title>Dialer autocompletion prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="normalize.css" type="text/css" />
+  <link rel="stylesheet" href="index.css" type="text/css" />
 </head>
 <body>
   <form action="" method="get">
     <div id="dialer-result"></div>
     <ul id="results"></ul>
     <div class="dialer-dialpad" id="dialer-dialpad">
-      <button type="button" value="49">1</button>
-      <button type="button" value="50">2</button>
-      <button type="button" value="51">3</button>
-      <button type="button" value="52">4</button>
-      <button type="button" value="53">5</button>
-      <button type="button" value="54">6</button>
-      <button type="button" value="55">7</button>
-      <button type="button" value="56">8</button>
-      <button type="button" value="57">9</button>
-      <button type="button" value="48">0</button>
-      <button type="button" value="42">*</button>
-      <button type="button" value="35">#</button>
-      <button type="button" value="8">x</button>
+      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row1" type="button" value="49">1</button>
+      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row1" type="button" value="50">2<em>ABC</em></button>
+      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row1" type="button" value="51">3<em>DEF</em>
+</button>
+      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row2" type="button" value="52">4<em>GHI</em>
+</button>
+      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row2" type="button" value="53">5<em>JKL</em></button>
+      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row2" type="button" value="54">6<em>MNO</em>
+</button>
+      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row3" type="button" value="55">7<em>PQRS</em></button>
+      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row3" type="button" value="56">8<em>TUV</em></button>
+      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row3" type="button" value="57">9<em>WXYZ</em></button>
+      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row4" type="button" value="48">0<em>+</em></button>
+      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row4" type="button" value="42">*</button>
+      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row4" type="button" value="35">#</button>
+      <button class="dialer-button" type="button" value="8">x</button>
     </div>
   </form>
   <script src="bundle.js"></script>
