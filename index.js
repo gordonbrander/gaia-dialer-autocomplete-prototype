@@ -45,6 +45,10 @@ function getTel(object) {
   return object.tel;
 }
 
+function isTouchSupport() {
+  return 'ontouchstart' in document.documentElement;
+}
+
 function grepContacts(pattern) {
   // Grep contacts using serialization function `getTel`.
   //
@@ -128,7 +132,7 @@ function buildString(string, charcode) {
 // ----------------------------------------------------------------------------
 
 var dialpadEl = document.getElementById('dialer-dialpad');
-var dialpadTapsOverTime = open(dialpadEl, 'click');
+var dialpadTapsOverTime = open(dialpadEl, isTouchSupport() ? 'touchstart' : 'click');
 
 var dialButtonTapsOverTime = filter(dialpadTapsOverTime, function isEventTargetButton(event) {
   return isNodeName(event.target, 'BUTTON');
