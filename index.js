@@ -27,6 +27,8 @@ var dropRepeats = require('transducer/drop-repeats');
 
 var grep = require('grep-reduce/grep');
 
+var compose = require('functional/compose');
+
 function lambda(method) {
   // Convert a method func that uses a `this` context into a function that takes
   // the context object as the first parameter.
@@ -45,6 +47,14 @@ function getTel(object) {
   return object.tel;
 }
 
+function extractNumbers(string) {
+  // For a given string, return only the numbers within that string.
+  // No special characters, no letters.
+  return string.replace(/[^\d.]/g, '');
+}
+
+var getTelAndExtractNumbers = compose(extractNumbers, getTel);
+
 function isTouchSupport() {
   return 'ontouchstart' in document.documentElement;
 }
@@ -53,7 +63,7 @@ function grepContacts(pattern) {
   // Grep contacts using serialization function `getTel`.
   //
   // String pattern -> Signal matches
-  return grep(pattern, CONTACTS_DATA, getTel);
+  return grep(pattern, CONTACTS_DATA, getTelAndExtractNumbers);
 }
 
 function SOQ() {
