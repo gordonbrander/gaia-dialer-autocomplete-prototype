@@ -8,7 +8,6 @@
 // ----------------------------------------------------------------------------
 
 var CONTACTS_DATA = require('./data/contacts.json');
-// A token to denote the start of a new query.
 
 // Imports and helper functions
 // ----------------------------------------------------------------------------
@@ -19,6 +18,7 @@ var fold = require('reducers/fold');
 var filter = require('reducers/filter');
 var map = require('reducers/map');
 var merge = require('reducers/merge');
+var reductions = require('reducers/reductions');
 var print = require('reducers/debug/print');
 
 var open = require('dom-reduce/event');
@@ -100,19 +100,45 @@ function appendChildFolder(childEl, parentEl) {
   return parentEl;
 }
 
+function setInnerHtmlFolder(string, el) {
+  // Set the innerHTML of an element. Arguments are in reverse order for
+  // folding.
+  el.innerHTML = string;
+  return el;
+}
+
+function getEventTargetValue(event) {
+  // Does what it says on the tin.
+  return event.target.value;
+}
+
+function isNodeName(el, nodeName) {
+  return el.nodeName === nodeName;
+}
+
+function buildString(string, charcode) {
+  // Appends the corresponding character to string unless `charcode`
+  // is backspace.
+  return Number(charcode) === 8 ?
+    string.slice(0, Math.max(string.length - 1, 0)) :
+    string + String.fromCharCode(charcode);
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
-// Catch all bubbled keypress events.
-var keypressesOverTime = open(document.documentElement, 'keyup');
+var dialpadEl = document.getElementById('dialer-dialpad');
+var dialpadTapsOverTime = open(dialpadEl, 'click');
 
-var dialerKeypressesOverTime = filter(keypressesOverTime, function isDialerEventTarget(event) {
-  return event.target.id = 'dialer';
+var dialButtonTapsOverTime = filter(dialpadTapsOverTime, function isEventTargetButton(event) {
+  return isNodeName(event.target, 'BUTTON');
 });
 
-var dialerValuesOverTime = map(dialerKeypressesOverTime, function mapKeypressEventToValue(event) {
-  return event.target.value;
-});
+var charCodesOverTime = map(dialButtonTapsOverTime, getEventTargetValue);
+
+var valuesOverTime = reductions(charCodesOverTime, buildString, '');
+
+var uniqueValuesOverTime = dropRepeats(valuesOverTime);
 
 // var uniqueDialerValuesOverTime = dropRepeats(dialerValuesOverTime);
 
@@ -120,12 +146,12 @@ var dialerValuesOverTime = map(dialerKeypressesOverTime, function mapKeypressEve
 //
 // 1. All queries that have words.
 // 2. All queries that do not have words.
-var validQueriesOverTime = filter(dialerValuesOverTime, function hasNonWhitespaceCharacter(possible) {
+var validQueriesOverTime = filter(uniqueValuesOverTime, function hasNonWhitespaceCharacter(possible) {
   return /\S/.test(possible);
 });
 
 // For every new value, we generate a Start of Query token.
-var SOQsOverTime = map(dialerValuesOverTime, SOQ);
+var SOQsOverTime = map(uniqueValuesOverTime, SOQ);
 
 var resultListsOverTime = map(validQueriesOverTime, grepContacts);
 
@@ -170,6 +196,9 @@ var createNodesLifted = liftNary(createNodes);
 var contactElsStream = map(contactHtmlStringStream, createNodesLifted);
 
 var containerEl = document.getElementById('results');
+var inputEl = document.getElementById('dialer-result');
+
+fold(uniqueValuesOverTime, setInnerHtmlFolder, inputEl);
 
 fold(soqStream, function foldSOQs() {
   // For every start of query, empty the results element.
