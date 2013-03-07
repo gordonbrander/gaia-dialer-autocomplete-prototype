@@ -50,7 +50,10 @@ html {
   border-radius: 0;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  font-size: 48px;
+  font-size: 36px;
+  /* A totally silly hack to get Firefox to put the text in the vertical
+  middle of the button. Only happens with <button> elements. */
+  line-height: 200%;
   padding: 0 0 0 20px;
   position: absolute;
   text-align: left;
@@ -58,13 +61,19 @@ html {
   height: 25%;
   width: 33.33%;
 }
+.dialer-button:focus {
+  /* Necessary to remove focus "grey out" in FirefoxOS. */
+  color: #222;
+}
 .dialer-button:active {
   background: #c3ced9;
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
 .dialer-button > em {
+  color: #777;
   font-size: 14px;
+  margin-left: 2px;
 }
 
 /* Nuke the inner spacing that Gecko puts into button elements. */
