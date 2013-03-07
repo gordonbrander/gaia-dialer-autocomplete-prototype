@@ -151,12 +151,11 @@ function format7DigitTel(string) {
 }
 
 function format10DigitTel(string) {
-  return string.replace(/(\d\d\d)(\d\d\d)(\d)/, '($1) $2-$3');
+  return string.replace(/^(\d\d\d)(\d\d\d)(\d)/, '($1) $2-$3');
 }
 
 function formatTel(string) {
   // String -> String
-  var safeString = extractNumbersString(string);
   if (string.length < 8)
     return format7DigitTel(string);
 
@@ -182,9 +181,7 @@ var valuesOverTime = reductions(charCodesOverTime, buildString, '');
 
 var uniqueValuesOverTime = dropRepeats(valuesOverTime);
 
-var numbersOverTime = map(uniqueValuesOverTime, extractNumbersString);
-
-var displayValuesOverTime = map(numbersOverTime, formatTel);
+var displayValuesOverTime = map(uniqueValuesOverTime, formatTel);
 
 // var uniqueDialerValuesOverTime = dropRepeats(dialerValuesOverTime);
 
@@ -192,12 +189,12 @@ var displayValuesOverTime = map(numbersOverTime, formatTel);
 //
 // 1. All queries that have words.
 // 2. All queries that do not have words.
-var validQueriesOverTime = filter(numbersOverTime, function hasNonWhitespaceCharacter(possible) {
+var validQueriesOverTime = filter(uniqueValuesOverTime, function hasNonWhitespaceCharacter(possible) {
   return /\S/.test(possible);
 });
 
 // For every new value, we generate a Start of Query token.
-var SOQsOverTime = map(numbersOverTime, SOQ);
+var SOQsOverTime = map(uniqueValuesOverTime, SOQ);
 
 var resultListsOverTime = map(validQueriesOverTime, grepContacts);
 
