@@ -1,3 +1,7 @@
+html {
+  color: #222;
+}
+
 .dialer-button,
 .dialer-delete {
   background: none;
@@ -32,6 +36,36 @@
   height: 280px;
 }
 
+.dialer-button {
+  background: #e5eaee;
+  border: 1px solid #c3ced9;
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  font-size: 48px;
+  padding: 0 0 0 20px;
+  position: absolute;
+  text-align: left;
+  display: block;
+  height: 25%;
+  width: 33.33%;
+}
+.dialer-button:active {
+  background: #c3ced9;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.dialer-button > em {
+  font-size: 14px;
+}
+
+/* Nuke the inner spacing that Gecko puts into button elements. */
+.dialer-button::-moz-focus-inner {
+    padding: 0;
+    border: 0
+}
+
 /* Compromising between flexibility and layout efficiency, I am absolutely
 positioning the dialer buttons against a fixed-height dialpad, rather than
 floating or using a table. This gives us flexible width, but will have to
@@ -44,8 +78,10 @@ account for height with media queries if supporting multiple res. */
 }
 .dialer-dialpad-col3 {
   left: 66.66%;
+  border-right: 0;
 }
 .dialer-dialpad-row1 {
+  border-top-width: 1px;
   top: 0;
 }
 .dialer-dialpad-row2 {
@@ -56,32 +92,6 @@ account for height with media queries if supporting multiple res. */
 }
 .dialer-dialpad-row4 {
   top: 75%;
-}
-
-.dialer-button {
-  background: #c3ced9;
-  border: 1px solid #e5eaee;
-  border-width: 0 1px 1px 0;
-  border-radius: 0;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  font-size: 48px;
-  line-height: 100%;
-  padding: 0 0 0 20px;
-  position: absolute;
-  text-align: left;
-  display: block;
-  height: 25%;
-  width: 33.33%;
-}
-.dialer-button > em {
-  font-size: 14px;
-}
-
-/* Nuke the inner spacing that Gecko puts into button elements. */
-.dialer-button::-moz-focus-inner {
-    padding: 0;
-    border: 0
 }
 
 /* Dialer completions
