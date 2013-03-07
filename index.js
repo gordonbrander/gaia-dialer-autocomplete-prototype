@@ -172,8 +172,8 @@ function formatTel(string) {
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
 
-var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetButton(event) {
-  return hasClass(event.target, 'dialer-button');
+var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetFromDialpad(event) {
+  return hasClass(event.target, 'dialer-button') || hasClass(event.target, 'dialer-delete');
 });
 
 var charCodesOverTime = map(dialButtonTapsOverTime, getEventTargetValue);
