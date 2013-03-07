@@ -83,3 +83,11 @@ account for height with media queries if supporting multiple res. */
     padding: 0;
     border: 0
 }
+
+/* Dialer completions
+----------------------------------------------------------------------------- */
+
+.dialer-completions {
+  height: 40px;
+  overflow: hidden;
+}
