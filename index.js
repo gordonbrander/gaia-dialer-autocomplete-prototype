@@ -42,6 +42,8 @@ function lambda(method) {
 // Used in a lot of places for slicing the arguments object into a proper array.
 var slice = Array.slice || lambda(Array.prototype.slice);
 
+var stringIndexOf = lambda(String.prototype.indexOf);
+
 function getTel(object) {
   // Just a helper function used by grepContacts.
   return object.tel;
@@ -126,8 +128,12 @@ function getEventTargetValue(event) {
   return event.target.value;
 }
 
-function isNodeName(el, nodeName) {
-  return el.nodeName === nodeName;
+function hasClass(el, classString) {
+  // Check if the given element has `classname`.
+  //
+  // Signiture:
+  // Element, string -> boolean
+  return stringIndexOf(el.className, classString) !== -1;
 }
 
 function buildString(string, charcode) {
@@ -142,10 +148,10 @@ function buildString(string, charcode) {
 // ----------------------------------------------------------------------------
 
 var dialpadEl = document.getElementById('dialer-dialpad');
-var dialpadTapsOverTime = open(dialpadEl, isTouchSupport() ? 'touchstart' : 'click');
+var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
 
-var dialButtonTapsOverTime = filter(dialpadTapsOverTime, function isEventTargetButton(event) {
-  return isNodeName(event.target, 'BUTTON');
+var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetButton(event) {
+  return hasClass(event.target, 'dialer-button');
 });
 
 var charCodesOverTime = map(dialButtonTapsOverTime, getEventTargetValue);
