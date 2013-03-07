@@ -65,6 +65,7 @@ account for height with media queries if supporting multiple res. */
   border-radius: 0;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+  font-size: 48px;
   line-height: 100%;
   padding: 0 0 0 20px;
   position: absolute;
@@ -75,10 +76,6 @@ account for height with media queries if supporting multiple res. */
 }
 .dialer-button > em {
   font-size: 14px;
-}
-
-.dialer-button {
-  font-size: 48px;
 }
 
 /* Nuke the inner spacing that Gecko puts into button elements. */
