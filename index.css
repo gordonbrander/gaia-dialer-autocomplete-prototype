@@ -5,6 +5,12 @@
   padding: 0;
 }
 
+.dialer-result {
+  font-size: 40px;
+  line-height: 80px;
+  height: 80px;
+}
+
 /* Dialpad
 ----------------------------------------------------------------------------- */
 .dialer-dialpad {
@@ -40,7 +46,11 @@ account for height with media queries if supporting multiple res. */
 
 .dialer-button {
   border: 1px solid #111;
+  border-radius: 0;
+  line-height: 25%;
+  padding-left: 20px;
   position: absolute;
+  text-align: left;
   display: block;
   height: 25%;
   width: 33.33%;
