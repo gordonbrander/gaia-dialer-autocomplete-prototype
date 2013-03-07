@@ -87,7 +87,7 @@ function createNodes(string) {
 }
 
 function mapContactToHtmlString(contact) {
-  return '<li><b>' + contact.name + '</b> ' + contact.tel + '</li>';
+  return '<li class="dialer-completion"><b class="title">' + contact.name + '</b> <div class="tel">' + contact.tel + '</div></li>';
 }
 
 // Doesn't work properly. Write test plz.
@@ -241,7 +241,7 @@ var createNodesLifted = liftNary(createNodes);
 // [[htmlString, score, match], ...] -> [[[nodes], score, match]]
 var contactElsStream = map(contactHtmlStringStream, createNodesLifted);
 
-var containerEl = document.getElementById('results');
+var containerEl = document.getElementById('dialer-completions');
 var inputEl = document.getElementById('dialer-result');
 
 fold(displayValuesOverTime, setInnerHtmlFolder, inputEl);
