@@ -18,10 +18,10 @@
   background: url(assets/sprite-a.y.png) 0 0 no-repeat;
   display: block;
   position: absolute;
-  right: 20px;
-  top: 28px;
-  width: 34px;
-  height: 24px;
+  right: 0;
+  top: 0;
+  width: 60px;
+  height: 80px;
   text-indent: -999em;
 }
 
@@ -60,7 +60,7 @@ account for height with media queries if supporting multiple res. */
 
 .dialer-button {
   background: #c3ced9;
-  border: 1px solid #fff;
+  border: 1px solid #e5eaee;
   border-width: 0 1px 1px 0;
   border-radius: 0;
   -moz-box-sizing: border-box;
