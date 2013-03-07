@@ -1,4 +1,5 @@
-.dialer-button {
+.dialer-button,
+.dialer-delete {
   background: none;
   border: 0;
   margin: 0;
@@ -12,6 +13,16 @@
   line-height: 80px;
   height: 80px;
   padding: 0 20px;
+}
+.dialer-delete {
+  background: url(assets/sprite-a.y.png) 0 0 no-repeat;
+  display: block;
+  position: absolute;
+  right: 20px;
+  top: 28px;
+  width: 34px;
+  height: 24px;
+  text-indent: -999em;
 }
 
 /* Dialpad
