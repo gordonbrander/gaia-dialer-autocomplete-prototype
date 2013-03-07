@@ -49,13 +49,15 @@ function getTel(object) {
   return object.tel;
 }
 
-function extractNumbers(string) {
+function extractNumbersString(string) {
   // For a given string, return only the numbers within that string.
   // No special characters, no letters.
+  //
+  // String -> String
   return string.replace(/[^\d.]/g, '');
 }
 
-var getTelAndExtractNumbers = compose(extractNumbers, getTel);
+var getTelAndExtractNumbersString = compose(extractNumbersString, getTel);
 
 function isTouchSupport() {
   return 'ontouchstart' in document.documentElement;
@@ -65,7 +67,7 @@ function grepContacts(pattern) {
   // Grep contacts using serialization function `getTel`.
   //
   // String pattern -> Signal matches
-  return grep(pattern, CONTACTS_DATA, getTelAndExtractNumbers);
+  return grep(pattern, CONTACTS_DATA, getTelAndExtractNumbersString);
 }
 
 function SOQ() {
@@ -144,6 +146,26 @@ function buildString(string, charcode) {
     string + String.fromCharCode(charcode);
 }
 
+function format7DigitTel(string) {
+  return string.replace(/^(\d\d\d)(\d)/, '$1-$2');
+}
+
+function format10DigitTel(string) {
+  return string.replace(/(\d\d\d)(\d\d\d)(\d)/, '($1) $2-$3');
+}
+
+function formatTel(string) {
+  // String -> String
+  var safeString = extractNumbersString(string);
+  if (string.length < 8)
+    return format7DigitTel(string);
+
+  if(string.length < 11)
+    return format10DigitTel(string);
+
+  return string;
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
@@ -160,18 +182,22 @@ var valuesOverTime = reductions(charCodesOverTime, buildString, '');
 
 var uniqueValuesOverTime = dropRepeats(valuesOverTime);
 
+var numbersOverTime = map(uniqueValuesOverTime, extractNumbersString);
+
+var displayValuesOverTime = map(numbersOverTime, formatTel);
+
 // var uniqueDialerValuesOverTime = dropRepeats(dialerValuesOverTime);
 
 // Split stream into 2 streams:
 //
 // 1. All queries that have words.
 // 2. All queries that do not have words.
-var validQueriesOverTime = filter(uniqueValuesOverTime, function hasNonWhitespaceCharacter(possible) {
+var validQueriesOverTime = filter(numbersOverTime, function hasNonWhitespaceCharacter(possible) {
   return /\S/.test(possible);
 });
 
 // For every new value, we generate a Start of Query token.
-var SOQsOverTime = map(uniqueValuesOverTime, SOQ);
+var SOQsOverTime = map(numbersOverTime, SOQ);
 
 var resultListsOverTime = map(validQueriesOverTime, grepContacts);
 
@@ -218,7 +244,7 @@ var contactElsStream = map(contactHtmlStringStream, createNodesLifted);
 var containerEl = document.getElementById('results');
 var inputEl = document.getElementById('dialer-result');
 
-fold(uniqueValuesOverTime, setInnerHtmlFolder, inputEl);
+fold(displayValuesOverTime, setInnerHtmlFolder, inputEl);
 
 fold(soqStream, function foldSOQs() {
   // For every start of query, empty the results element.
