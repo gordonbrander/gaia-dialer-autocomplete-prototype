@@ -3,11 +3,18 @@ html {
 }
 
 .dialer-button,
-.dialer-delete {
+.dialer-delete,
+.dialer-dial {
   background: none;
   border: 0;
   margin: 0;
   padding: 0;
+}
+
+.dialer-dial {
+  background: #84c82c url(assets/sprite-a.y.png) center -100px no-repeat;
+  height: 40px;
+  width: 100%;
 }
 
 .dialer-result {
