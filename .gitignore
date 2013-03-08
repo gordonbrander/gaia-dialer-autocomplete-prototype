@@ -1,5 +1,5 @@
-# Ignore built files
-bundle.js
+# On gh-pages branch, DON'T ignore built files
+# bundle.js
 
 # Ignore node_modules folder
 node_modules/
