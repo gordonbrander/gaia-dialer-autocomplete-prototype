@@ -154,13 +154,28 @@ function format10DigitTel(string) {
   return string.replace(/^(\d\d\d)(\d\d\d)(\d)/, '($1) $2-$3');
 }
 
+function truncateLettersLeft(string, max, ellipsis) {
+  var length = string.length;
+  return length > max ? (ellipsis || '...') + string.slice(Math.max(length - max, 0)) : string;
+}
+
 function formatTel(string) {
   // String -> String
-  if (string.length < 8)
+
+  var length = string.length;
+
+  if (length < 8)
     return format7DigitTel(string);
 
-  if(string.length < 11)
+  if(length < 11)
     return format10DigitTel(string);
+
+  // @fixme Hard code max string length. If this were real-world, would want to
+  // calculate maximum length based on the width of the container and the
+  // em size. Better still would be to do some shrinking of text (I did
+  // this in a branch but was getting sizing bugs from Firefox).
+  if(length > 12)
+    return truncateLettersLeft(string, 11);
 
   return string;
 }
