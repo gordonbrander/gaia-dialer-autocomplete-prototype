@@ -153,7 +153,9 @@ account for height with media queries if supporting multiple res. */
 }
 
 .dialer-completions-toggle {
+  background: url(assets/sprite-a.y.png) 0 -200px no-repeat;
   height: 50px;
+  padding: 0 20px 0 24px;
   position: absolute;
   right: 0;
 }
