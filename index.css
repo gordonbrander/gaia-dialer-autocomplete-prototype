@@ -1,10 +1,16 @@
 html {
+  background: #222;
   color: #222;
+}
+
+body {
+  width: 320px;
 }
 
 .dialer {
   height: 460px;
   overflow: hidden;
+  position: relative;
 }
 
 .dialer-button,
