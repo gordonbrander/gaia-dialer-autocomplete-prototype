@@ -186,6 +186,10 @@ function formatTel(string) {
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
 
+var completionsToggleTapsOverTime = filter(tapsOverTime, function isEventTargetFromCompletionsToggle(event) {
+  return hasClass(event.target, 'dialer-completions-toggle');
+});
+
 var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetFromDialpad(event) {
   return hasClass(event.target, 'dialer-button') || hasClass(event.target, 'dialer-delete');
 });
@@ -266,3 +270,11 @@ fold(soqStream, function foldSOQs() {
 fold(contactElsStream, function foldContactEls(result) {
   fold(slice(result[0]), appendChildFolder, containerEl);
 });
+
+fold(completionsToggleTapsOverTime, function(event, containerEl) {
+  var x = hasClass(containerEl, 'dialer-completions-open') ?
+    containerEl.classList.remove('dialer-completions-open') :
+    containerEl.classList.add('dialer-completions-open');
+
+  return containerEl;
+}, containerEl);

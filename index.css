@@ -2,6 +2,11 @@ html {
   color: #222;
 }
 
+.dialer {
+  height: 460px;
+  overflow: hidden;
+}
+
 .dialer-button,
 .dialer-delete,
 .dialer-dial {
@@ -122,14 +127,27 @@ account for height with media queries if supporting multiple res. */
   margin: 0;
   overflow: hidden;
   padding: 0;
+  transition: height 300ms cubic-bezier(0.215, 0.610, 0.355, 1.000);
+}
+/* Open state for dialer-completions. This class is added by JS. */
+.dialer-completions-open {
+  height: 340px;
+  overflow-y: auto;
 }
 
 .dialer-completion {
+  border-bottom: 1px solid #212932;
   color: #aeb9c4;
-  height: 46px;
-  padding: 7px 20px 0 20px;
+  height: 44px;
+  padding: 6px 20px 0 20px;
 }
 .dialer-completion > .title {
   display: block;
   margin-bottom: 2px;
+}
+
+.dialer-completions-toggle {
+  height: 50px;
+  position: absolute;
+  right: 0;
 }
