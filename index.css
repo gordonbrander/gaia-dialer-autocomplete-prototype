@@ -137,11 +137,13 @@ account for height with media queries if supporting multiple res. */
 
 .dialer-completion {
   border-bottom: 1px solid #212932;
-  color: #aeb9c4;
+  color: #8a929b;
   height: 44px;
   padding: 6px 20px 0 20px;
 }
 .dialer-completion > .title {
+  color: #aeb9c4;
+  font-weight: normal;
   display: block;
   margin-bottom: 2px;
 }
