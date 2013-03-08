@@ -87,7 +87,7 @@ function createNodes(string) {
 }
 
 function mapContactToHtmlString(contact) {
-  return '<li class="dialer-completion"><b class="title">' + contact.name + '</b> <div class="tel">' + contact.tel + '</div></li>';
+  return '<li class="dialer-completion"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
 }
 
 // Doesn't work properly. Write test plz.
