@@ -115,6 +115,8 @@ account for height with media queries if supporting multiple res. */
 ----------------------------------------------------------------------------- */
 
 .dialer-completions {
+  background: #29333e;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
   height: 50px;
   list-style: none;
   margin: 0;
@@ -123,6 +125,7 @@ account for height with media queries if supporting multiple res. */
 }
 
 .dialer-completion {
+  color: #aeb9c4;
   height: 46px;
   padding: 7px 20px 0 20px;
 }
