@@ -23,6 +23,10 @@ var print = require('reducers/debug/print');
 
 var open = require('dom-reduce/event');
 
+var fps = require('./fps-reduce.js');
+
+var coreduction = require('coreduction/coreduction');
+
 var dropRepeats = require('transducer/drop-repeats');
 
 var grep = require('grep-reduce/grep');
