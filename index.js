@@ -184,6 +184,16 @@ function formatTel(string) {
   return string;
 }
 
+function first(thing) {
+  // Basically `identity`.
+  return thing;
+}
+
+function subtract1Min0(number) {
+  // Subtract 1, but not below 0.
+  return Math.max(number - 1, 0);
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
@@ -246,6 +256,22 @@ var resultStream = filter(everythingStream, function (thing) {
   return !isSOQ(thing);
 });
 
+// Generate a stream of counts for incoming values.
+var countsOverTime = reductions(everythingStream, function foldDelimitedCount(accumulated, thing) {
+  // If `thing` is `SOQ()`, we're starting a new collection. Reset the count.
+  return isSOQ(thing) ? 0 : accumulated + 1;
+}, 0);
+
+// Throttle counts at 5fps. Since in most cases counts will be tallied for
+// syncronous sets of grep results, we want to avoid hitting the DOM `n` times.
+var counts5fps = dropRepeats(coreduction(countsOverTime, fps(5), first));
+
+var moreCountsOverTime = map(counts5fps, subtract1Min0);
+
+var moreTextOverTime = map(moreCountsOverTime, function (number) {
+  return number === 0 ? '' : '+' + number;
+});
+
 // Lift `mapContactToHtmlString()` so it transform the first value of grep
 // results.
 var mapContactToHtmlStringLifted = liftNary(mapContactToHtmlString);
@@ -263,6 +289,8 @@ var contactElsStream = map(contactHtmlStringStream, createNodesLifted);
 
 var containerEl = document.getElementById('dialer-completions');
 var inputEl = document.getElementById('dialer-result');
+
+fold(moreTextOverTime, setInnerHtmlFolder, document.getElementById('dialer-completions-toggle'));
 
 fold(displayValuesOverTime, setInnerHtmlFolder, inputEl);
 
