@@ -143,19 +143,23 @@ account for height with media queries if supporting multiple res. */
 
 .dialer-completion {
   border-bottom: 1px solid #212932;
-  color: #aeb9c4;
+  color: #8a929b;
   height: 44px;
   padding: 6px 20px 0 20px;
 }
 .dialer-completion > .title {
+  color: #aeb9c4;
+  font-weight: normal;
   display: block;
   margin-bottom: 2px;
 }
 
 .dialer-completions-toggle {
-  background: url(assets/sprite-a.y.png) 0 -200px no-repeat;
+  background: url(assets/sprite-a.y.png) right -200px no-repeat;
+  color: #aeb9c4;
   height: 50px;
-  padding: 0 20px 0 24px;
+  line-height: 50px;
+  padding: 0 44px 0 10px;
   position: absolute;
   right: 0;
 }
