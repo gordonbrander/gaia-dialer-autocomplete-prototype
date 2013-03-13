@@ -248,9 +248,6 @@ var queriesOverTime = dropRepeats(valuesOverTime);
 
 var displayValuesOverTime = map(queriesOverTime, formatTel);
 
-// For every new value, we generate a Start of Query token.
-var SOQsOverTime = map(queriesOverTime, SOQ);
-
 // 1-dimensional signal with `SOQ` delimeters indicating a query has started.
 //
 // Visualizing the list:
