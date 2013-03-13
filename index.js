@@ -92,7 +92,7 @@ function isSOQ(thing) {
 var dummy = document.createElement('div');
 function createNodes(string) {
   dummy.innerHTML = string;
-  return dummy.children;
+  return slice(dummy.children);
 }
 
 function mapContactToHtmlString(contact) {
@@ -125,6 +125,11 @@ function appendChildFolder(childEl, parentEl) {
   // Fold many children
   parentEl.appendChild(childEl);
   return parentEl;
+}
+
+function emptyInnerHtml(el) {
+  el.innerHTML = '';
+  return el;
 }
 
 function setInnerHtmlFolder(string, el) {
@@ -199,6 +204,13 @@ function subtract1Min0(number) {
   return Math.max(number - 1, 0);
 }
 
+function isOnlyWhitespace(string) {
+  // Regex search for any non-whitespace character. Negate the result.
+  // If we find any non-whitespace character, than the string is not
+  // whitespace only.
+  return !(/\S/.test(string));
+}
+
 function compareGrepScores(a, b) {
   // Compare results of `grep-reduce/grep`, by grep score.
   // Array, Array -> Number
@@ -213,10 +225,21 @@ function compareGrepScores(a, b) {
         0));
 }
 
+function fork(reducible, predicate) {
+  // Fork a stream into 2 via a predicate.
+  function reversePredicate(thing) {
+    return !predicate(thing);
+  }
+  return [
+    filter(reducible, predicate),
+    filter(reducible, reversePredicate)
+  ];
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
-var fpsStream = fps(10);
+var fpsStream = fps(20);
 
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
@@ -233,70 +256,46 @@ var charCodesOverTime = map(dialButtonTapsOverTime, getEventTargetValue);
 
 var valuesOverTime = reductions(charCodesOverTime, buildString, '');
 
-var uniqueValuesOverTime = dropRepeats(valuesOverTime);
+var queriesOverTime = dropRepeats(valuesOverTime);
 
-var displayValuesOverTime = map(uniqueValuesOverTime, formatTel);
-
-// var uniqueDialerValuesOverTime = dropRepeats(dialerValuesOverTime);
-
-// Split stream into 2 streams:
-//
-// 1. All queries that have words.
-// 2. All queries that do not have words.
-var validQueriesOverTime = filter(uniqueValuesOverTime, function hasNonWhitespaceCharacter(possible) {
-  return /\S/.test(possible);
-});
+var displayValuesOverTime = map(queriesOverTime, formatTel);
 
 // For every new value, we generate a Start of Query token.
-var SOQsOverTime = map(uniqueValuesOverTime, SOQ);
+var SOQsOverTime = map(queriesOverTime, SOQ);
 
-var resultListsOverTime = map(validQueriesOverTime, grepContacts);
-
-// Flatten 2D signal into 1D signal.
-var resultsOverTime = merge(resultListsOverTime);
-
-// Merge results with empty SOQs.
+// 1-dimensional signal with `SOQ` delimeters indicating a query has started.
 //
-// This 1D signal has SOQ "bumpers" denoting when one set of results begins.
+// Visualizing the list:
+// `SOQ-o-o-o-o-SOQ-o-o-o-o-o-o-o-o-o-SOQ-o-o...`
 //
-// The advantage of using this approach instead of a 2D signal is that it lets
-// us react to incoming results immediately, without having to wait for the
-// full set.
-//
-// Merged array is ordered by time, so put SOQsOverTime in front so they appear
-// at the beginning of a result group, not the end.
-var resultsAndSOQsOverTime = merge([SOQsOverTime, resultsOverTime]);
+// Use `dropRepeats` to remove adjacent repeats from signal. We don't need to
+// react to the same thing 2x.
+var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
+  // If the value is only whitespace, return an empty list with an SOQ token.
+  // Otherwise, search for matches.
+  return isOnlyWhitespace(value) ? [SOQ()] : concat(SOQ(), grepContacts(value));
+}));
 
-// Remove adjacent repeats from signal. We don't need to react to the same
-// thing 2x.
-var everythingStream = dropRepeats(resultsAndSOQsOverTime);
-
-var resultSetReductionsOverTime = reductions(everythingStream, function (accumulated, thing) {
+var resultSetReductionsOverTime = reductions(everythingOverTime, function (accumulated, thing) {
   return isSOQ(thing) ? [] : accumulated.concat([thing]);
 }, []);
 
 var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
 
 var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results) {
-  return sort(results, compareGrepScores);
+  return results.length > 0 ? sort(results, compareGrepScores) : results;
 });
 
-var top15ResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
+var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
   return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-var everythingSortedOverTime = dropRepeats(expand(top15ResultSetsOverTime, function (results) {
+var everythingSortedOverTime = dropRepeats(expand(topResultSetsOverTime, function (results) {
   return concat(SOQ(), results);
 }));
 
-var countsOverTime = map(top15ResultSetsOverTime, function (results) {
+var countsOverTime = map(topResultSetsOverTime, function (results) {
   return results.length;
-});
-
-var soqStream = filter(everythingSortedOverTime, isSOQ);
-
-var resultStream = filter(everythingSortedOverTime, function (thing) {
-  return !isSOQ(thing);
 });
 
 var moreCountsOverTime = map(countsOverTime, subtract1Min0);
@@ -305,41 +304,31 @@ var moreTextOverTime = map(moreCountsOverTime, function (number) {
   return number === 0 ? '' : '+' + number;
 });
 
-// Lift `mapContactToHtmlString()` so it transform the first value of grep
-// results.
-var mapContactToHtmlStringLifted = liftNary(mapContactToHtmlString);
+var soqsVsResults = fork(everythingSortedOverTime, isSOQ);
 
-// Transform the first value of the grep results.
-// [[contact, score, match], ...] -> [[htmlString, score, match], ...]
-var contactHtmlStringStream = map(resultStream, mapContactToHtmlStringLifted);
-
-// Lift `createNodes()` so it transform the first value of grep
-// results.
-var createNodesLifted = liftNary(createNodes);
-
-// [[htmlString, score, match], ...] -> [[[nodes], score, match]]
-var contactElsStream = map(contactHtmlStringStream, createNodesLifted);
-
-var containerEl = document.getElementById('dialer-completions');
-var inputEl = document.getElementById('dialer-result');
-
-fold(moreTextOverTime, setInnerHtmlFolder, document.getElementById('dialer-completions-toggle'));
-
-fold(displayValuesOverTime, setInnerHtmlFolder, inputEl);
-
-fold(soqStream, function foldSOQs() {
-  // For every start of query, empty the results element.
-  containerEl.innerHTML = '';
+var contactsOverTime = map(soqsVsResults[1], function i0(array) {
+  return array[0];
 });
 
-fold(contactElsStream, function foldContactEls(result) {
-  fold(slice(result[0]), appendChildFolder, containerEl);
-});
+var contactHtmlStringsOverTime = map(contactsOverTime, mapContactToHtmlString);
+var contactElsOverTime = expand(contactHtmlStringsOverTime, createNodes);
 
-fold(completionsToggleTapsOverTime, function(event, containerEl) {
-  var x = hasClass(containerEl, 'dialer-completions-open') ?
-    containerEl.classList.remove('dialer-completions-open') :
-    containerEl.classList.add('dialer-completions-open');
+var completionsEl = document.getElementById('dialer-completions');
+var resultEl = document.getElementById('dialer-result');
+var completionsToggleEl = document.getElementById('dialer-completions-toggle');
 
-  return containerEl;
-}, containerEl);
+fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
+
+fold(displayValuesOverTime, setInnerHtmlFolder, resultEl);
+
+fold(merge([soqsVsResults[0], contactElsOverTime]), function (thing, completionsEl) {
+  return isSOQ(thing) ? emptyInnerHtml(completionsEl) : appendChildFolder(thing, completionsEl);
+}, completionsEl);
+
+fold(completionsToggleTapsOverTime, function(event, completionsEl) {
+  var x = hasClass(completionsEl, 'dialer-completions-open') ?
+    completionsEl.classList.remove('dialer-completions-open') :
+    completionsEl.classList.add('dialer-completions-open');
+
+  return completionsEl;
+}, completionsEl);
