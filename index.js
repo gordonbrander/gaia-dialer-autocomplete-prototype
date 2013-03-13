@@ -19,6 +19,8 @@ var filter = require('reducers/filter');
 var map = require('reducers/map');
 var merge = require('reducers/merge');
 var reductions = require('reducers/reductions');
+var concat = require('reducers/concat');
+var expand = require('reducers/expand');
 var print = require('reducers/debug/print');
 
 var open = require('dom-reduce/event');
@@ -48,7 +50,6 @@ function lambda(method) {
 var slice = Array.slice || lambda(Array.prototype.slice);
 
 var sort = Array.sort || lambda(Array.prototype.sort);
-var concat = Array.concat || lambda(Array.prototype.concat);
 
 var stringIndexOf = lambda(String.prototype.indexOf);
 
@@ -271,7 +272,7 @@ var resultsAndSOQsOverTime = merge([SOQsOverTime, resultsOverTime]);
 var everythingStream = dropRepeats(resultsAndSOQsOverTime);
 
 var resultSetReductionsOverTime = reductions(everythingStream, function (accumulated, thing) {
-  return isSOQ(thing) ? [] : concat(accumulated, [thing]);
+  return isSOQ(thing) ? [] : accumulated.concat([thing]);
 }, []);
 
 var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
@@ -280,17 +281,21 @@ var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results
   return sort(results, compareGrepScores);
 });
 
-var top15ResultsOverTime = map(sortedResultSetsOverTime, function (results) {
-  return slice(results, 0, 15);
+var top15ResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
+  return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-var countsOverTime = map(top15ResultsOverTime, function (results) {
+var everythingSortedOverTime = dropRepeats(expand(top15ResultSetsOverTime, function (results) {
+  return concat(SOQ(), results);
+}));
+
+var countsOverTime = map(top15ResultSetsOverTime, function (results) {
   return results.length;
 });
 
-var soqStream = filter(everythingStream, isSOQ);
+var soqStream = filter(everythingSortedOverTime, isSOQ);
 
-var resultStream = filter(everythingStream, function (thing) {
+var resultStream = filter(everythingSortedOverTime, function (thing) {
   return !isSOQ(thing);
 });
 
