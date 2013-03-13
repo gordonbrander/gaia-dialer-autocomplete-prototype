@@ -23,8 +23,9 @@ body {
 }
 
 .dialer-dial {
-  background: #84c82c url(assets/sprite-a.y.png) center -100px no-repeat;
-  height: 40px;
+  background: url(assets/sprite-a.y.png) center -100px no-repeat, -moz-linear-gradient(top, #84c82c, #5f9b0a), #84c82c;
+  border-top: 1px solid #5f9b0a;
+  height: 50px;
   width: 100%;
 }
 
@@ -52,7 +53,7 @@ body {
 ----------------------------------------------------------------------------- */
 .dialer-dialpad {
   position: relative;
-  height: 280px;
+  height: 270px;
 }
 
 .dialer-button {

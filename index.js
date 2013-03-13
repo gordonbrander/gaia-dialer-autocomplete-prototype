@@ -19,9 +19,13 @@ var filter = require('reducers/filter');
 var map = require('reducers/map');
 var merge = require('reducers/merge');
 var reductions = require('reducers/reductions');
+var concat = require('reducers/concat');
+var expand = require('reducers/expand');
 var print = require('reducers/debug/print');
 
 var open = require('dom-reduce/event');
+
+var sample = require('sample/sample');
 
 var fps = require('./fps-reduce.js');
 
@@ -29,8 +33,9 @@ var coreduction = require('coreduction/coreduction');
 
 var dropRepeats = require('transducer/drop-repeats');
 
-var grep = require('grep-reduce/grep');
+var geneology = require('./geneology-reduce.js');
 
+var grep = require('grep-reduce/grep');
 var compose = require('functional/compose');
 
 function lambda(method) {
@@ -46,6 +51,8 @@ function lambda(method) {
 // Used in a lot of places for slicing the arguments object into a proper array.
 var slice = Array.slice || lambda(Array.prototype.slice);
 
+var sort = Array.sort || lambda(Array.prototype.sort);
+
 var stringIndexOf = lambda(String.prototype.indexOf);
 
 function getTel(object) {
@@ -58,7 +65,7 @@ function extractNumbersString(string) {
   // No special characters, no letters.
   //
   // String -> String
-  return string.replace(/[^\d.]/g, '');
+  return ('' + string).replace(/[^\d.]/g, '');
 }
 
 var getTelAndExtractNumbersString = compose(extractNumbersString, getTel);
@@ -87,11 +94,11 @@ function isSOQ(thing) {
 var dummy = document.createElement('div');
 function createNodes(string) {
   dummy.innerHTML = string;
-  return dummy.children;
+  return slice(dummy.children);
 }
 
 function mapContactToHtmlString(contact) {
-  return '<li class="dialer-completion"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
+  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
 }
 
 // Doesn't work properly. Write test plz.
@@ -104,22 +111,15 @@ function extend(obj) {
   }, obj);
 }
 
-function liftNary(fn) {
-  // Kind of a wierd one, but this function is useful for composing
-  // ordinary functions with more than one argument.
-  //
-  // (x, y -> z) -> ([x, y] -> [z, y])
-  return function liftedNary(args) {
-    var argsCopy = slice(args);
-    argsCopy[0] = fn.apply(null, args);
-    return argsCopy;
-  }
-}
-
 function appendChildFolder(childEl, parentEl) {
   // Fold many children
   parentEl.appendChild(childEl);
   return parentEl;
+}
+
+function emptyInnerHtml(el) {
+  el.innerHTML = '';
+  return el;
 }
 
 function setInnerHtmlFolder(string, el) {
@@ -139,15 +139,19 @@ function hasClass(el, classString) {
   //
   // Signiture:
   // Element, string -> boolean
-  return stringIndexOf(el.className, classString) !== -1;
+  return el.classList && el.classList.contains(classString);
 }
 
-function buildString(string, charcode) {
-  // Appends the corresponding character to string unless `charcode`
-  // is backspace.
-  return Number(charcode) === 8 ?
-    string.slice(0, Math.max(string.length - 1, 0)) :
-    string + String.fromCharCode(charcode);
+function charCodeAt0(string) {
+  // Return the charcode for the character at position 0 of a string.
+  // string -> string
+  return String.charCodeAt(string[0]);
+}
+
+function charCodes(string) {
+  // Return an array of charcodes for characters in a string.
+  // string -> [charCode, charCode, ...]
+  return map(string.split(''), charCodeAt0);
 }
 
 function format7DigitTel(string) {
@@ -194,11 +198,79 @@ function subtract1Min0(number) {
   return Math.max(number - 1, 0);
 }
 
+function isOnlyWhitespace(string) {
+  // Regex search for any non-whitespace character. Negate the result.
+  // If we find any non-whitespace character, than the string is not
+  // whitespace only.
+  return !(/\S/.test(string));
+}
+
+function compareGrepScores(a, b) {
+  // Compare results of `grep-reduce/grep`, by grep score.
+  // Array, Array -> Number
+  // When used with `Array.sort` will return sorted array, reversed.
+  var scoreA = a[1];
+  var scoreB = b[1];
+  return (
+    scoreA < scoreB ?
+      1 :
+      (scoreA > scoreB ?
+        -1 :
+        0));
+}
+
+function fork(reducible, predicate) {
+  // Fork a stream into 2 via a predicate.
+  function reversePredicate(thing) {
+    return !predicate(thing);
+  }
+  return [
+    filter(reducible, predicate),
+    filter(reducible, reversePredicate)
+  ];
+}
+
+function hasClassDialerCompletionFolder(el, bool) {
+  // A very specific func for folding dialer completion ancestors.
+  return bool === true ? bool : hasClass(el, 'dialer-completion');
+}
+
+function dialerCompletionFolder(el, found) {
+  // A very specific func for folding dialer completion ancestors.
+  return hasClass(el, 'dialer-completion') ? el : found;
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
+var fpsStream = fps(20);
+
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
+
+var completionTapsOverTime = filter(tapsOverTime, function (event) {
+  // Search up the geneology tree for an element with the dialer-completion class.
+  // The max depth of the geneology is 1. We don't want to search up the whole
+  // tree!
+  return fold(geneology(event.target, 1), hasClassDialerCompletionFolder, false);
+});
+
+// Drop any repeats.. we don't need 'em.
+var completionElsOverTime = dropRepeats(map(completionTapsOverTime, function (event) {
+  // Search again up the genology tree for the dialer completion element.
+  // We could probably consolidate this step and the last into a single
+  // fold/reduce thingy.
+  return fold(geneology(event.target, 1), dialerCompletionFolder);
+}));
+
+var completionNumbersOverTime = map(completionElsOverTime, function (el) {
+  return el.dataset.tel;
+});
+
+var completionNumberStringsOverTime = map(completionNumbersOverTime, extractNumbersString);
+var completionCharCodesOverTime = expand(completionNumberStringsOverTime, function(string) {
+  return concat(SOQ(), charCodes(string));
+});
 
 var completionsToggleTapsOverTime = filter(tapsOverTime, function isEventTargetFromCompletionsToggle(event) {
   return hasClass(event.target, 'dialer-completions-toggle');
@@ -208,105 +280,90 @@ var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetFromDial
   return hasClass(event.target, 'dialer-button') || hasClass(event.target, 'dialer-delete');
 });
 
-var charCodesOverTime = map(dialButtonTapsOverTime, getEventTargetValue);
+var charCodesOverTime = merge([
+  completionCharCodesOverTime,
+  map(dialButtonTapsOverTime, getEventTargetValue)
+]);
 
-var valuesOverTime = reductions(charCodesOverTime, buildString, '');
+var valuesOverTime = reductions(charCodesOverTime, function buildString(string, thing) {
+  // If `thing` is the start of a new query, clear out all numbers...
+  if(isSOQ(thing)) return '';
+  // If `thing` is charcode 8 (delete), remove a character...
+  if(Number(thing) === 8) return string.slice(0, Math.max(string.length - 1, 0));
+  // ...otherwise, append the corresponding character to string.
+  return string + String.fromCharCode(thing);
+}, '');
 
-var uniqueValuesOverTime = dropRepeats(valuesOverTime);
+var queriesOverTime = dropRepeats(valuesOverTime);
 
-var displayValuesOverTime = map(uniqueValuesOverTime, formatTel);
+var displayValuesOverTime = map(queriesOverTime, formatTel);
 
-// var uniqueDialerValuesOverTime = dropRepeats(dialerValuesOverTime);
-
-// Split stream into 2 streams:
+// 1-dimensional signal with `SOQ` delimeters indicating a query has started.
 //
-// 1. All queries that have words.
-// 2. All queries that do not have words.
-var validQueriesOverTime = filter(uniqueValuesOverTime, function hasNonWhitespaceCharacter(possible) {
-  return /\S/.test(possible);
+// Visualizing the list:
+// `SOQ-o-o-o-o-SOQ-o-o-o-o-o-o-o-o-o-SOQ-o-o...`
+//
+// Use `dropRepeats` to remove adjacent repeats from signal. We don't need to
+// react to the same thing 2x.
+var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
+  // If the value is only whitespace, return an empty list with an SOQ token.
+  // Otherwise, search for matches.
+  return isOnlyWhitespace(value) ? [SOQ()] : concat(SOQ(), grepContacts(value));
+}));
+
+var resultSetReductionsOverTime = reductions(everythingOverTime, function (accumulated, thing) {
+  return isSOQ(thing) ? [] : accumulated.concat([thing]);
+}, []);
+
+var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
+
+var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results) {
+  return results.length > 0 ? sort(results, compareGrepScores) : results;
 });
 
-// For every new value, we generate a Start of Query token.
-var SOQsOverTime = map(uniqueValuesOverTime, SOQ);
-
-var resultListsOverTime = map(validQueriesOverTime, grepContacts);
-
-// Flatten 2D signal into 1D signal.
-var resultsOverTime = merge(resultListsOverTime);
-
-// Merge results with empty SOQs.
-//
-// This 1D signal has SOQ "bumpers" denoting when one set of results begins.
-//
-// The advantage of using this approach instead of a 2D signal is that it lets
-// us react to incoming results immediately, without having to wait for the
-// full set.
-//
-// Merged array is ordered by time, so put SOQsOverTime in front so they appear
-// at the beginning of a result group, not the end.
-var resultsAndSOQsOverTime = merge([SOQsOverTime, resultsOverTime]);
-
-// Remove adjacent repeats from signal. We don't need to react to the same
-// thing 2x.
-var everythingStream = dropRepeats(resultsAndSOQsOverTime);
-
-var soqStream = filter(everythingStream, isSOQ);
-
-var resultStream = filter(everythingStream, function (thing) {
-  return !isSOQ(thing);
+var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
+  return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-// Generate a stream of counts for incoming values.
-var countsOverTime = reductions(everythingStream, function foldDelimitedCount(accumulated, thing) {
-  // If `thing` is `SOQ()`, we're starting a new collection. Reset the count.
-  return isSOQ(thing) ? 0 : accumulated + 1;
-}, 0);
+var everythingSortedOverTime = dropRepeats(expand(topResultSetsOverTime, function (results) {
+  return concat(SOQ(), results);
+}));
 
-// Throttle counts at 5fps. Since in most cases counts will be tallied for
-// syncronous sets of grep results, we want to avoid hitting the DOM `n` times.
-var counts5fps = dropRepeats(coreduction(countsOverTime, fps(5), first));
+var countsOverTime = map(topResultSetsOverTime, function (results) {
+  return results.length;
+});
 
-var moreCountsOverTime = map(counts5fps, subtract1Min0);
+var moreCountsOverTime = map(countsOverTime, subtract1Min0);
 
 var moreTextOverTime = map(moreCountsOverTime, function (number) {
   return number === 0 ? '' : '+' + number;
 });
 
-// Lift `mapContactToHtmlString()` so it transform the first value of grep
-// results.
-var mapContactToHtmlStringLifted = liftNary(mapContactToHtmlString);
+var soqsVsResults = fork(everythingSortedOverTime, isSOQ);
 
-// Transform the first value of the grep results.
-// [[contact, score, match], ...] -> [[htmlString, score, match], ...]
-var contactHtmlStringStream = map(resultStream, mapContactToHtmlStringLifted);
-
-// Lift `createNodes()` so it transform the first value of grep
-// results.
-var createNodesLifted = liftNary(createNodes);
-
-// [[htmlString, score, match], ...] -> [[[nodes], score, match]]
-var contactElsStream = map(contactHtmlStringStream, createNodesLifted);
-
-var containerEl = document.getElementById('dialer-completions');
-var inputEl = document.getElementById('dialer-result');
-
-fold(moreTextOverTime, setInnerHtmlFolder, document.getElementById('dialer-completions-toggle'));
-
-fold(displayValuesOverTime, setInnerHtmlFolder, inputEl);
-
-fold(soqStream, function foldSOQs() {
-  // For every start of query, empty the results element.
-  containerEl.innerHTML = '';
+var contactsOverTime = map(soqsVsResults[1], function i0(array) {
+  return array[0];
 });
 
-fold(contactElsStream, function foldContactEls(result) {
-  fold(slice(result[0]), appendChildFolder, containerEl);
-});
+var contactHtmlStringsOverTime = map(contactsOverTime, mapContactToHtmlString);
+var contactElsOverTime = expand(contactHtmlStringsOverTime, createNodes);
 
-fold(completionsToggleTapsOverTime, function(event, containerEl) {
-  var x = hasClass(containerEl, 'dialer-completions-open') ?
-    containerEl.classList.remove('dialer-completions-open') :
-    containerEl.classList.add('dialer-completions-open');
+var completionsEl = document.getElementById('dialer-completions');
+var resultEl = document.getElementById('dialer-result');
+var completionsToggleEl = document.getElementById('dialer-completions-toggle');
 
-  return containerEl;
-}, containerEl);
+fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
+
+fold(displayValuesOverTime, setInnerHtmlFolder, resultEl);
+
+fold(merge([soqsVsResults[0], contactElsOverTime]), function (thing, completionsEl) {
+  return isSOQ(thing) ? emptyInnerHtml(completionsEl) : appendChildFolder(thing, completionsEl);
+}, completionsEl);
+
+fold(completionsToggleTapsOverTime, function(event, completionsEl) {
+  var x = hasClass(completionsEl, 'dialer-completions-open') ?
+    completionsEl.classList.remove('dialer-completions-open') :
+    completionsEl.classList.add('dialer-completions-open');
+
+  return completionsEl;
+}, completionsEl);
