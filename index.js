@@ -33,6 +33,8 @@ var coreduction = require('coreduction/coreduction');
 
 var dropRepeats = require('transducer/drop-repeats');
 
+var geneology = require('./geneology-reduce.js');
+
 var grep = require('grep-reduce/grep');
 var compose = require('functional/compose');
 
@@ -63,7 +65,7 @@ function extractNumbersString(string) {
   // No special characters, no letters.
   //
   // String -> String
-  return string.replace(/[^\d.]/g, '');
+  return ('' + string).replace(/[^\d.]/g, '');
 }
 
 var getTelAndExtractNumbersString = compose(extractNumbersString, getTel);
@@ -96,7 +98,7 @@ function createNodes(string) {
 }
 
 function mapContactToHtmlString(contact) {
-  return '<li class="dialer-completion"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
+  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
 }
 
 // Doesn't work properly. Write test plz.
@@ -137,15 +139,19 @@ function hasClass(el, classString) {
   //
   // Signiture:
   // Element, string -> boolean
-  return stringIndexOf(el.className, classString) !== -1;
+  return el.classList && el.classList.contains(classString);
 }
 
-function buildString(string, charcode) {
-  // Appends the corresponding character to string unless `charcode`
-  // is backspace.
-  return Number(charcode) === 8 ?
-    string.slice(0, Math.max(string.length - 1, 0)) :
-    string + String.fromCharCode(charcode);
+function charCodeAt0(string) {
+  // Return the charcode for the character at position 0 of a string.
+  // string -> string
+  return String.charCodeAt(string[0]);
+}
+
+function charCodes(string) {
+  // Return an array of charcodes for characters in a string.
+  // string -> [charCode, charCode, ...]
+  return map(string.split(''), charCodeAt0);
 }
 
 function format7DigitTel(string) {
@@ -224,6 +230,16 @@ function fork(reducible, predicate) {
   ];
 }
 
+function hasClassDialerCompletionFolder(el, bool) {
+  // A very specific func for folding dialer completion ancestors.
+  return bool === true ? bool : hasClass(el, 'dialer-completion');
+}
+
+function dialerCompletionFolder(el, found) {
+  // A very specific func for folding dialer completion ancestors.
+  return hasClass(el, 'dialer-completion') ? el : found;
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
@@ -231,6 +247,30 @@ var fpsStream = fps(20);
 
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
+
+var completionTapsOverTime = filter(tapsOverTime, function (event) {
+  // Search up the geneology tree for an element with the dialer-completion class.
+  // The max depth of the geneology is 1. We don't want to search up the whole
+  // tree!
+  return fold(geneology(event.target, 1), hasClassDialerCompletionFolder, false);
+});
+
+// Drop any repeats.. we don't need 'em.
+var completionElsOverTime = dropRepeats(map(completionTapsOverTime, function (event) {
+  // Search again up the genology tree for the dialer completion element.
+  // We could probably consolidate this step and the last into a single
+  // fold/reduce thingy.
+  return fold(geneology(event.target, 1), dialerCompletionFolder);
+}));
+
+var completionNumbersOverTime = map(completionElsOverTime, function (el) {
+  return el.dataset.tel;
+});
+
+var completionNumberStringsOverTime = map(completionNumbersOverTime, extractNumbersString);
+var completionCharCodesOverTime = expand(completionNumberStringsOverTime, function(string) {
+  return concat(SOQ(), charCodes(string));
+});
 
 var completionsToggleTapsOverTime = filter(tapsOverTime, function isEventTargetFromCompletionsToggle(event) {
   return hasClass(event.target, 'dialer-completions-toggle');
@@ -240,9 +280,19 @@ var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetFromDial
   return hasClass(event.target, 'dialer-button') || hasClass(event.target, 'dialer-delete');
 });
 
-var charCodesOverTime = map(dialButtonTapsOverTime, getEventTargetValue);
+var charCodesOverTime = merge([
+  completionCharCodesOverTime,
+  map(dialButtonTapsOverTime, getEventTargetValue)
+]);
 
-var valuesOverTime = reductions(charCodesOverTime, buildString, '');
+var valuesOverTime = reductions(charCodesOverTime, function buildString(string, thing) {
+  // If `thing` is the start of a new query, clear out all numbers...
+  if(isSOQ(thing)) return '';
+  // If `thing` is charcode 8 (delete), remove a character...
+  if(Number(thing) === 8) return string.slice(0, Math.max(string.length - 1, 0));
+  // ...otherwise, append the corresponding character to string.
+  return string + String.fromCharCode(thing);
+}, '');
 
 var queriesOverTime = dropRepeats(valuesOverTime);
 
