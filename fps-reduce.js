@@ -1,3 +1,5 @@
+"use strict";
+
 var reducible = require("reducible/reducible");
 var isReduced = require("reducible/is-reduced");
 
