@@ -23,6 +23,8 @@ var print = require('reducers/debug/print');
 
 var open = require('dom-reduce/event');
 
+var sample = require('sample/sample');
+
 var fps = require('./fps-reduce.js');
 
 var coreduction = require('coreduction/coreduction');
@@ -30,7 +32,6 @@ var coreduction = require('coreduction/coreduction');
 var dropRepeats = require('transducer/drop-repeats');
 
 var grep = require('grep-reduce/grep');
-
 var compose = require('functional/compose');
 
 function lambda(method) {
@@ -45,6 +46,9 @@ function lambda(method) {
 // A lambda approach to `Array.prototype.slice`.
 // Used in a lot of places for slicing the arguments object into a proper array.
 var slice = Array.slice || lambda(Array.prototype.slice);
+
+var sort = Array.sort || lambda(Array.prototype.sort);
+var concat = Array.concat || lambda(Array.prototype.concat);
 
 var stringIndexOf = lambda(String.prototype.indexOf);
 
@@ -194,8 +198,24 @@ function subtract1Min0(number) {
   return Math.max(number - 1, 0);
 }
 
+function compareGrepScores(a, b) {
+  // Compare results of `grep-reduce/grep`, by grep score.
+  // Array, Array -> Number
+  // When used with `Array.sort` will return sorted array, reversed.
+  var scoreA = a[1];
+  var scoreB = b[1];
+  return (
+    scoreA < scoreB ?
+      1 :
+      (scoreA > scoreB ?
+        -1 :
+        0));
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
+
+var fpsStream = fps(10);
 
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
@@ -250,23 +270,31 @@ var resultsAndSOQsOverTime = merge([SOQsOverTime, resultsOverTime]);
 // thing 2x.
 var everythingStream = dropRepeats(resultsAndSOQsOverTime);
 
+var resultSetReductionsOverTime = reductions(everythingStream, function (accumulated, thing) {
+  return isSOQ(thing) ? [] : concat(accumulated, [thing]);
+}, []);
+
+var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
+
+var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results) {
+  return sort(results, compareGrepScores);
+});
+
+var top15ResultsOverTime = map(sortedResultSetsOverTime, function (results) {
+  return slice(results, 0, 15);
+});
+
+var countsOverTime = map(top15ResultsOverTime, function (results) {
+  return results.length;
+});
+
 var soqStream = filter(everythingStream, isSOQ);
 
 var resultStream = filter(everythingStream, function (thing) {
   return !isSOQ(thing);
 });
 
-// Generate a stream of counts for incoming values.
-var countsOverTime = reductions(everythingStream, function foldDelimitedCount(accumulated, thing) {
-  // If `thing` is `SOQ()`, we're starting a new collection. Reset the count.
-  return isSOQ(thing) ? 0 : accumulated + 1;
-}, 0);
-
-// Throttle counts at 5fps. Since in most cases counts will be tallied for
-// syncronous sets of grep results, we want to avoid hitting the DOM `n` times.
-var counts5fps = dropRepeats(coreduction(countsOverTime, fps(5), first));
-
-var moreCountsOverTime = map(counts5fps, subtract1Min0);
+var moreCountsOverTime = map(countsOverTime, subtract1Min0);
 
 var moreTextOverTime = map(moreCountsOverTime, function (number) {
   return number === 0 ? '' : '+' + number;

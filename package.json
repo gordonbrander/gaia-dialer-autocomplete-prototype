@@ -15,7 +15,8 @@
     "eventual": "~1.0.0",
     "zip-reduce": "~0.1.0",
     "browserify": "*",
-    "coreduction": "0.0.2"
+    "coreduction": "0.0.2",
+    "sample": "0.0.2"
   },
   "devDependencies": {
     "node-static": "*",
