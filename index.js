@@ -109,18 +109,6 @@ function extend(obj) {
   }, obj);
 }
 
-function liftNary(fn) {
-  // Kind of a wierd one, but this function is useful for composing
-  // ordinary functions with more than one argument.
-  //
-  // (x, y -> z) -> ([x, y] -> [z, y])
-  return function liftedNary(args) {
-    var argsCopy = slice(args);
-    argsCopy[0] = fn.apply(null, args);
-    return argsCopy;
-  }
-}
-
 function appendChildFolder(childEl, parentEl) {
   // Fold many children
   parentEl.appendChild(childEl);
