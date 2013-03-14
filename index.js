@@ -249,6 +249,22 @@ function dialerCompletionFolder(el, found) {
   return hasClass(el, 'dialer-completion') ? el : found;
 }
 
+function liftMap(lambda) {
+  // Transform a function, making it a mapping function.
+  // (z -> y) -> ([x, x, ...] -> [y, y, ...])
+  return function liftedMapper(array) {
+    return map(array, lambda);
+  }
+}
+
+function i0(array) {
+  return array[0];
+}
+
+function stringConcatFolder(string, result) {
+  return result + string;
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
@@ -334,9 +350,16 @@ var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
   return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-var everythingSortedOverTime = dropRepeats(expand(topResultSetsOverTime, function (results) {
-  return concat(SOQ(), results);
-}));
+// [[result...]...] -> [[contact...]...]
+var contactSetsOverTime = map(topResultSetsOverTime, liftMap(i0));
+
+// [[contact...]...] -> [[string...]...]
+var contactSetHtmlStringsOverTime = map(contactSetsOverTime, liftMap(mapContactToHtmlString));
+
+// [[string...]...] -> [string...]
+var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrings) {
+  return fold(htmlStrings, stringConcatFolder, '');
+});
 
 var countsOverTime = map(topResultSetsOverTime, function (results) {
   return results.length;
@@ -347,15 +370,6 @@ var moreCountsOverTime = map(countsOverTime, subtract1Min0);
 var moreTextOverTime = map(moreCountsOverTime, function (number) {
   return number === 0 ? '' : '+' + number;
 });
-
-var soqsVsResults = fork(everythingSortedOverTime, isSOQ);
-
-var contactsOverTime = map(soqsVsResults[1], function i0(array) {
-  return array[0];
-});
-
-var contactHtmlStringsOverTime = map(contactsOverTime, mapContactToHtmlString);
-var contactElsOverTime = expand(contactHtmlStringsOverTime, createNodes);
 
 var completionsEl = document.getElementById('dialer-completions');
 var resultEl = document.getElementById('dialer-result');
@@ -370,9 +384,7 @@ fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
 fold(displayValuesOverTime, setInnerHtmlFolder, resultEl);
 
-fold(merge([soqsVsResults[0], contactElsOverTime]), function (thing, completionsEl) {
-  return isSOQ(thing) ? emptyInnerHtml(completionsEl) : appendChildFolder(thing, completionsEl);
-}, completionsEl);
+fold(resultsHtmlOverTime, setInnerHtmlFolder, completionsEl);
 
 fold(completionsToggleTapsOverTime, function(event, completionsEl) {
   var x = hasClass(completionsEl, 'dialer-completions-open') ?
