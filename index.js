@@ -328,7 +328,10 @@ var displayValuesOverTime = map(queriesOverTime, formatTel);
 // Visualizing the list:
 // `SOQ-o-o-o-o-SOQ-o-o-o-o-o-o-o-o-o-SOQ-o-o...`
 //
-// Use `dropRepeats` to remove adjacent repeats from signal. We don't need to
+// Grep scored items may not come during the same turn, so doing reductions on
+// a flat list is one way to deal with it.
+//
+// Use `dropRepeats` to remove adjacent repeat SOQs from signal. We don't need to
 // react to the same thing 2x.
 var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
   // If the value is only whitespace, return an empty list with an SOQ token.
