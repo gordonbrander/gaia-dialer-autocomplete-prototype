@@ -362,6 +362,7 @@ var resultEl = document.getElementById('dialer-result');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
 
 fold(countsOverTime, function (count, completionsToggleEl) {
+  completionsEl.classList.remove('dialer-completions-open');
   return setStyle(completionsToggleEl, 'display', (count > 1 ? 'block' : 'none'));
 }, completionsToggleEl);
 
