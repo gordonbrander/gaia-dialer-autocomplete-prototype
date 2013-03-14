@@ -142,6 +142,15 @@ function hasClass(el, classString) {
   return el.classList && el.classList.contains(classString);
 }
 
+function setStyle(el, property, value) {
+  // Set a style property on an element, mutating the DOM.
+  // el -> el
+  //
+  // Before setting the property, check if the value is already set.
+  if(el.style[property] !== value) el.style[property] = value;
+  return el;
+}
+
 function charCodeAt0(string) {
   // Return the charcode for the character at position 0 of a string.
   // string -> string
@@ -351,6 +360,10 @@ var contactElsOverTime = expand(contactHtmlStringsOverTime, createNodes);
 var completionsEl = document.getElementById('dialer-completions');
 var resultEl = document.getElementById('dialer-result');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
+
+fold(countsOverTime, function (count, completionsToggleEl) {
+  return setStyle(completionsToggleEl, 'display', (count > 1 ? 'block' : 'none'));
+}, completionsToggleEl);
 
 fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
