@@ -142,6 +142,15 @@ function hasClass(el, classString) {
   return el.classList && el.classList.contains(classString);
 }
 
+function setStyle(el, property, value) {
+  // Set a style property on an element, mutating the DOM.
+  // el -> el
+  //
+  // Before setting the property, check if the value is already set.
+  if(el.style[property] !== value) el.style[property] = value;
+  return el;
+}
+
 function charCodeAt0(string) {
   // Return the charcode for the character at position 0 of a string.
   // string -> string
@@ -240,6 +249,22 @@ function dialerCompletionFolder(el, found) {
   return hasClass(el, 'dialer-completion') ? el : found;
 }
 
+function liftMap(lambda) {
+  // Transform a function, making it a mapping function.
+  // (z -> y) -> ([x, x, ...] -> [y, y, ...])
+  return function liftedMapper(array) {
+    return map(array, lambda);
+  }
+}
+
+function i0(array) {
+  return array[0];
+}
+
+function stringConcatFolder(string, result) {
+  return result + string;
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
@@ -303,7 +328,10 @@ var displayValuesOverTime = map(queriesOverTime, formatTel);
 // Visualizing the list:
 // `SOQ-o-o-o-o-SOQ-o-o-o-o-o-o-o-o-o-SOQ-o-o...`
 //
-// Use `dropRepeats` to remove adjacent repeats from signal. We don't need to
+// Grep scored items may not come during the same turn, so doing reductions on
+// a flat list is one way to deal with it.
+//
+// Use `dropRepeats` to remove adjacent repeat SOQs from signal. We don't need to
 // react to the same thing 2x.
 var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
   // If the value is only whitespace, return an empty list with an SOQ token.
@@ -311,23 +339,36 @@ var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
   return isOnlyWhitespace(value) ? [SOQ()] : concat(SOQ(), grepContacts(value));
 }));
 
+// Here we accumulate possible permutations of the 1-dimensional list over time
+// as 2-dimensional lists over time.
+// It's basically a rolling buffer.
 var resultSetReductionsOverTime = reductions(everythingOverTime, function (accumulated, thing) {
   return isSOQ(thing) ? [] : accumulated.concat([thing]);
 }, []);
 
+// We don't need to sample the rolling buffer more than 20fps.
 var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
 
+// sort the throttled permutations.
 var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results) {
   return results.length > 0 ? sort(results, compareGrepScores) : results;
 });
 
+// Limit the throttled permutations to 10 top scorers.
 var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
   return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-var everythingSortedOverTime = dropRepeats(expand(topResultSetsOverTime, function (results) {
-  return concat(SOQ(), results);
-}));
+// [[result...]...] -> [[contact...]...]
+var contactSetsOverTime = map(topResultSetsOverTime, liftMap(i0));
+
+// [[contact...]...] -> [[string...]...]
+var contactSetHtmlStringsOverTime = map(contactSetsOverTime, liftMap(mapContactToHtmlString));
+
+// [[string...]...] -> [string...]
+var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrings) {
+  return fold(htmlStrings, stringConcatFolder, '');
+});
 
 var countsOverTime = map(topResultSetsOverTime, function (results) {
   return results.length;
@@ -339,26 +380,20 @@ var moreTextOverTime = map(moreCountsOverTime, function (number) {
   return number === 0 ? '' : '+' + number;
 });
 
-var soqsVsResults = fork(everythingSortedOverTime, isSOQ);
-
-var contactsOverTime = map(soqsVsResults[1], function i0(array) {
-  return array[0];
-});
-
-var contactHtmlStringsOverTime = map(contactsOverTime, mapContactToHtmlString);
-var contactElsOverTime = expand(contactHtmlStringsOverTime, createNodes);
-
 var completionsEl = document.getElementById('dialer-completions');
 var resultEl = document.getElementById('dialer-result');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
+
+fold(countsOverTime, function (count, completionsToggleEl) {
+  completionsEl.classList.remove('dialer-completions-open');
+  return setStyle(completionsToggleEl, 'display', (count > 1 ? 'block' : 'none'));
+}, completionsToggleEl);
 
 fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
 fold(displayValuesOverTime, setInnerHtmlFolder, resultEl);
 
-fold(merge([soqsVsResults[0], contactElsOverTime]), function (thing, completionsEl) {
-  return isSOQ(thing) ? emptyInnerHtml(completionsEl) : appendChildFolder(thing, completionsEl);
-}, completionsEl);
+fold(resultsHtmlOverTime, setInnerHtmlFolder, completionsEl);
 
 fold(completionsToggleTapsOverTime, function(event, completionsEl) {
   var x = hasClass(completionsEl, 'dialer-completions-open') ?
