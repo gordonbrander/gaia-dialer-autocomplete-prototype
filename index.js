@@ -336,16 +336,22 @@ var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
   return isOnlyWhitespace(value) ? [SOQ()] : concat(SOQ(), grepContacts(value));
 }));
 
+// Here we accumulate possible permutations of the 1-dimensional list over time
+// as 2-dimensional lists over time.
+// It's basically a rolling buffer.
 var resultSetReductionsOverTime = reductions(everythingOverTime, function (accumulated, thing) {
   return isSOQ(thing) ? [] : accumulated.concat([thing]);
 }, []);
 
+// We don't need to sample the rolling buffer more than 20fps.
 var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
 
+// sort the throttled permutations.
 var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results) {
   return results.length > 0 ? sort(results, compareGrepScores) : results;
 });
 
+// Limit the throttled permutations to 10 top scorers.
 var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
   return results.length > 10 ? slice(results, 0, 10) : results;
 });
