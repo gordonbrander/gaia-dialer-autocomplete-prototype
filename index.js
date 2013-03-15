@@ -370,6 +370,7 @@ var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrin
   return fold(htmlStrings, stringConcatFolder, '');
 });
 
+// [[result...]...] -> [Number...]
 var countsOverTime = map(topResultSetsOverTime, function (results) {
   return results.length;
 });
@@ -385,7 +386,7 @@ var resultEl = document.getElementById('dialer-result');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
 
 fold(countsOverTime, function (count, completionsToggleEl) {
-  completionsEl.classList.remove('dialer-completions-open');
+  if(count < 2) completionsEl.classList.remove('dialer-completions-open');
   return setStyle(completionsToggleEl, 'display', (count > 1 ? 'block' : 'none'));
 }, completionsToggleEl);
 
