@@ -36,6 +36,11 @@ var dropRepeats = require('transducer/drop-repeats');
 var geneology = require('./geneology-reduce.js');
 
 var grep = require('grep-reduce/grep');
+
+var zip = require('zip-reduce');
+
+var Pattern = require('pattern-exp');
+
 var compose = require('functional/compose');
 
 function lambda(method) {
@@ -101,10 +106,11 @@ function mapContactToHtmlString(contact) {
   return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
 }
 
-// Doesn't work properly. Write test plz.
-function extend(obj) {
-  return reduce(slice(arguments, 1), function (obj, objN) {
-    return reduce(Object.keys(objN), function (obj, key) {
+function extend(obj/* obj1, obj2, objN */) {
+  // Copy all keys and values of obj1..objN to obj.
+  // Mutates obj. Tip: use `Object.create` to copy values to a new object.
+  return Array.prototype.slice.call(arguments, 1).reduce(function (obj, objN) {
+    return Object.keys(objN).reduce(function (obj, key) {
       obj[key] = objN[key];
       return obj;
     }, obj);
@@ -323,6 +329,44 @@ var queriesOverTime = dropRepeats(valuesOverTime);
 
 var displayValuesOverTime = map(queriesOverTime, formatTel);
 
+// Split the stream into 2, one for whitespace and one for values.
+// This lets us avoid grepping for empty values.
+var emptiesVsQueriesOverTime = fork(queriesOverTime, function (value) {
+  return isOnlyWhitespace(value);
+});
+
+// Transform empty queries into empty result sets.
+// Empty queries are typically spawned when hitting the delete key all the
+// way back.
+var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
+  return [];
+});
+
+var patternsOverTime = map(emptiesVsQueriesOverTime[1], function (value) {
+  return Pattern(value, "i");
+});
+
+// [value...] -> [[value, [result...]]...]
+var grepResultsOverTime = map(patternsOverTime, grepContacts);
+
+// [pattern...], [[result...]...] -> [[pattern, [result...]...]...]
+var patternsAndResultsOverTime = zip(patternsOverTime, grepResultsOverTime);
+
+// [[pattern, [result...]...]...] -> [[contact...]...]
+var templateResultSetsOverTime = map(patternsAndResultsOverTime, function (pair) {
+  var pattern = pair[0];
+
+  return map(pair[1], function (result) {
+    var contact = result[0];
+    return extend(Object.create(contact), {
+      score: result[1],
+      match: pattern.exec(extractNumbersString(contact.tel))
+    });
+  });
+});
+
+var allResultsOverTime = merge([emptyResultSetsOverTime, templateResultSetsOverTime]);
+
 // 1-dimensional signal with `SOQ` delimeters indicating a query has started.
 //
 // Visualizing the list:
@@ -333,12 +377,10 @@ var displayValuesOverTime = map(queriesOverTime, formatTel);
 //
 // Use `dropRepeats` to remove adjacent repeat SOQs from signal. We don't need to
 // react to the same thing 2x.
-var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
-  // If the value is only whitespace, return an empty list with an SOQ token.
-  // Otherwise, search for matches.
-  return isOnlyWhitespace(value) ? [SOQ()] : concat(SOQ(), grepContacts(value));
+var everythingOverTime = dropRepeats(expand(allResultsOverTime, function (reducible) {
+  return concat(SOQ(), reducible);
 }));
-
+print(everythingOverTime);
 // Here we accumulate possible permutations of the 1-dimensional list over time
 // as 2-dimensional lists over time.
 // It's basically a rolling buffer.
@@ -355,15 +397,12 @@ var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results
 });
 
 // Limit the throttled permutations to 10 top scorers.
-var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
+var topContactSetsOverTime = map(sortedResultSetsOverTime, function (results) {
   return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-// [[result...]...] -> [[contact...]...]
-var contactSetsOverTime = map(topResultSetsOverTime, liftMap(i0));
-
 // [[contact...]...] -> [[string...]...]
-var contactSetHtmlStringsOverTime = map(contactSetsOverTime, liftMap(mapContactToHtmlString));
+var contactSetHtmlStringsOverTime = map(topContactSetsOverTime, liftMap(mapContactToHtmlString));
 
 // [[string...]...] -> [string...]
 var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrings) {
@@ -371,7 +410,7 @@ var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrin
 });
 
 // [[result...]...] -> [Number...]
-var countsOverTime = map(topResultSetsOverTime, function (results) {
+var countsOverTime = map(topContactSetsOverTime, function (results) {
   return results.length;
 });
 
