@@ -103,7 +103,8 @@ function createNodes(string) {
 }
 
 function mapContactToHtmlString(contact) {
-  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
+  var highlightedTel = contact.tel.replace(contact.pattern, '<b>$1</b>');
+  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + highlightedTel + '</div></li>';
 }
 
 function extend(obj/* obj1, obj2, objN */) {
@@ -258,8 +259,8 @@ function dialerCompletionFolder(el, found) {
 function liftMap(lambda) {
   // Transform a function, making it a mapping function.
   // (z -> y) -> ([x, x, ...] -> [y, y, ...])
-  return function liftedMapper(array) {
-    return map(array, lambda);
+  return function liftedMapper(reducible) {
+    return map(reducible, lambda);
   }
 }
 
@@ -343,24 +344,34 @@ var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
 });
 
 var patternsOverTime = map(emptiesVsQueriesOverTime[1], function (value) {
-  return Pattern(value, "i");
+  return Pattern(value);
 });
 
 // [value...] -> [[value, [result...]]...]
 var grepResultsOverTime = map(patternsOverTime, grepContacts);
 
-// [pattern...], [[result...]...] -> [[pattern, [result...]...]...]
-var patternsAndResultsOverTime = zip(patternsOverTime, grepResultsOverTime);
+// [query...], [[result...]...] -> [[query, [result...]...]...]
+var queriesAndResultsOverTime = zip(emptiesVsQueriesOverTime[1], grepResultsOverTime);
 
 // [[pattern, [result...]...]...] -> [[contact...]...]
-var templateResultSetsOverTime = map(patternsAndResultsOverTime, function (pair) {
-  var pattern = pair[0];
+var templateResultSetsOverTime = map(queriesAndResultsOverTime, function (pair) {
+  var query = pair[0];
+  var pattern = Pattern(
+    '(' +
+    // Try to match a leading parenthesis, but can be not there, too.
+    '\\(?' +
+    // Allow any number of non-numeric characters between numbers.
+    query.split('').join('\\D*') +
+    ')'
+  );
 
   return map(pair[1], function (result) {
     var contact = result[0];
+
     return extend(Object.create(contact), {
       score: result[1],
-      match: pattern.exec(extractNumbersString(contact.tel))
+      query: query,
+      pattern: pattern
     });
   });
 });

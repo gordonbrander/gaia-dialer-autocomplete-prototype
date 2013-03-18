@@ -148,6 +148,9 @@ account for height with media queries if supporting multiple res. */
   display: block;
   margin-bottom: 2px;
 }
+.dialer-completion > .subtitle > b {
+  color: #fff;
+}
 
 .dialer-completions-toggle {
   background: url(assets/sprite-a.y.png) right -200px no-repeat;
