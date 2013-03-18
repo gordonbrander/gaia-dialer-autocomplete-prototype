@@ -391,7 +391,7 @@ var allResultsOverTime = merge([emptyResultSetsOverTime, templateResultSetsOverT
 var everythingOverTime = dropRepeats(expand(allResultsOverTime, function (reducible) {
   return concat(SOQ(), reducible);
 }));
-print(everythingOverTime);
+
 // Here we accumulate possible permutations of the 1-dimensional list over time
 // as 2-dimensional lists over time.
 // It's basically a rolling buffer.
@@ -432,7 +432,7 @@ var moreTextOverTime = map(moreCountsOverTime, function (number) {
 });
 
 var completionsEl = document.getElementById('dialer-completions');
-var resultEl = document.getElementById('dialer-result');
+var contactEl = document.getElementById('dialer-contact');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
 
 fold(countsOverTime, function (count, completionsToggleEl) {
@@ -442,7 +442,7 @@ fold(countsOverTime, function (count, completionsToggleEl) {
 
 fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
-fold(displayValuesOverTime, setInnerHtmlFolder, resultEl);
+fold(displayValuesOverTime, setInnerHtmlFolder, contactEl);
 
 fold(resultsHtmlOverTime, setInnerHtmlFolder, completionsEl);
 
