@@ -209,6 +209,17 @@ account for height with media queries if supporting multiple res. */
   color: #fff;
 }
 
+.dialer-completion-match {
+  border-bottom: 1px solid #212932;
+  color: #fff;
+  line-height: 50px;
+  padding: 0 20px;
+}
+.dialer-completion-match > .title {
+  font-weight: normal;
+  font-size: 18px;
+}
+
 .dialer-completions-toggle {
   background: url(assets/sprite-a.y.png) right -200px no-repeat;
   color: #aeb9c4;
@@ -223,7 +234,28 @@ account for height with media queries if supporting multiple res. */
 ----------------------------------------------------------------------------- */
 
 .dialer-calling {
-  background: url(assets/calling.png) center center no-repeat;
+  background: #e5eaee;
   height: 320px;
-  text-align: center;
+}
+
+.dialer-calling > .header {
+  background: #c4cfda;
+  color: #686e74;
+  font-size: 18px;
+  line-height: 20px;
+  padding: 15px 20px;
+  position: relative;
+}
+
+.dialer-calling-time {
+  height: 50px;
+  position: absolute;
+  line-height: 50px;
+  right: 20px;
+  top: 0;
+}
+
+.dialer-calling-icon {
+  background: url(assets/calling.png) center center no-repeat;
+  height: 270px;
 }

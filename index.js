@@ -103,8 +103,18 @@ function createNodes(string) {
 }
 
 function mapContactToHtmlString(contact) {
-  var highlightedTel = contact.tel.replace(contact.pattern, '<b>$1</b>');
-  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + highlightedTel + '</div></li>';
+  return contact.score === 1 ? mapContactToNameHtmlString(contact) : mapContactToNameAndNumberHtmlString(contact);
+}
+
+function mapContactToNameHtmlString(contact) {
+  // Title only
+  return '<li class="dialer-completion-match" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b></li>';
+}
+
+function mapContactToNameAndNumberHtmlString(contact) {
+  // Title and subtitle
+  var subtitle = contact.tel.replace(contact.pattern, '<b>$1</b>');
+  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + subtitle + '</div></li>';
 }
 
 function extend(obj/* obj1, obj2, objN */) {
