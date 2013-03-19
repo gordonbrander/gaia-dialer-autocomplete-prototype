@@ -308,12 +308,25 @@ var completionsToggleTapsOverTime = filter(tapsOverTime, function isEventTargetF
   return hasClass(event.target, 'dialer-completions-toggle');
 });
 
+var submitTapsOverTime = filter(tapsOverTime, function filterSubmitTaps(event) {
+  // Filter a stream of taps on the 'dial' element.
+  return hasClass(event.target, 'dialer-dial');
+});
+
+var disconnectTapsOverTime = filter(tapsOverTime, function filterDisconnectTaps(event) {
+  // Filter a stream of taps on the 'disconnect' element.
+  return hasClass(event.target, 'dialing-disconnect');
+});
+
+var disconnectSOQsOverTime = map(disconnectTapsOverTime, SOQ);
+
 var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetFromDialpad(event) {
   return hasClass(event.target, 'dialer-button') || hasClass(event.target, 'dialer-delete');
 });
 
 var charCodesOverTime = merge([
   completionCharCodesOverTime,
+  disconnectSOQsOverTime,
   map(dialButtonTapsOverTime, getEventTargetValue)
 ]);
 
@@ -434,6 +447,7 @@ var moreTextOverTime = map(moreCountsOverTime, function (number) {
 var completionsEl = document.getElementById('dialer-completions');
 var contactEl = document.getElementById('dialer-contact');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
+var dialingEl = document.getElementById('dialing');
 
 fold(countsOverTime, function (count, completionsToggleEl) {
   if(count < 2) completionsEl.classList.remove('dialer-completions-open');
@@ -453,3 +467,9 @@ fold(completionsToggleTapsOverTime, function(event, completionsEl) {
 
   return completionsEl;
 }, completionsEl);
+
+fold(submitTapsOverTime, function (event, dialingEl) {
+  event.preventDefault();
+  setStyle(dialingEl, 'display', 'block');
+  return dialingEl;
+}, dialingEl);
