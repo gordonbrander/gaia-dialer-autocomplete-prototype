@@ -154,8 +154,8 @@ account for height with media queries if supporting multiple res. */
 }
 
 .dialer-card-flipped {
-  -moz-transform: rotateY(180deg);
-  transform: rotateY(180deg);
+  -moz-transform: rotateY(-180deg);
+  transform: rotateY(-180deg);
 }
 
 .dialer-card-face-front,
@@ -166,8 +166,8 @@ account for height with media queries if supporting multiple res. */
 }
 
 .dialer-card-face-back {
-  -moz-transform: rotateY(180deg);
-  transform: rotateY(180deg);
+  -moz-transform: rotateY(-180deg);
+  transform: rotateY(-180deg);
 }
 
 /* Dialer completions
