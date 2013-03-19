@@ -225,6 +225,14 @@ account for height with media queries if supporting multiple res. */
   right: 0;
 }
 
+.dialer-add-as-contact {
+  background: url(assets/sprite-a.y.png) 20px -400px no-repeat;
+  color: #aeb9c4;
+  height: 50px;
+  line-height: 50px;
+  padding: 0 20px 0 60px;
+}
+
 /* Dialer dialing menu
 ----------------------------------------------------------------------------- */
 
