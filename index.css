@@ -9,7 +9,8 @@ html {
 
 .dialer-button,
 .dialer-delete,
-.dialer-dial {
+.dialer-dial,
+.dialer-disconnect {
   background: none;
   border: 0;
   margin: 0;
@@ -19,6 +20,13 @@ html {
 .dialer-dial {
   background: url(assets/sprite-a.y.png) center -100px no-repeat, -moz-linear-gradient(top, #84c82c, #5f9b0a), #84c82c;
   border-top: 1px solid #5f9b0a;
+  height: 50px;
+  width: 100%;
+}
+
+.dialer-disconnect {
+  background: url(assets/sprite-a.y.png) center -300px no-repeat, -moz-linear-gradient(top, #ff0000, #cf0000), #ff0000;
+  border-top: 1px solid #cf0000;
   height: 50px;
   width: 100%;
 }
