@@ -1,4 +1,282 @@
-;(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){/* This Source Code Form is subject to the terms of the Mozilla Public
+;(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){module.exports=[
+  {
+    "name":"Matt Helm",
+    "tel":"(503) 177-2938"
+  },
+  {
+    "name":"Hal Ambler",
+    "tel":"(503) 877-6932"
+  },
+  {
+    "name":"Ali Imran",
+    "tel":"(503) 625-2445"
+  },
+  {
+    "name":"Jane Blonde",
+    "tel":"(198) 828-5828"
+  },
+  {
+    "name":"Basil Argyros",
+    "tel":"(389) 412-5035"
+  },
+  {
+    "name":"Modesty Blaise",
+    "tel":"(196) 764-8078"
+  },
+  {
+    "name":"Sir Alan Blunt",
+    "tel":"(415) 281-7417"
+  },
+  {
+    "name":"James Bond",
+    "tel":"(596) 630-1354"
+  },
+  {
+    "name":"Felix Leiter",
+    "tel":"(437) 897-8009"
+  },
+  {
+    "name":"Nancy Drew",
+    "tel":"(948) 691-8816"
+  },
+  {
+    "name":"Sherlock Holmes",
+    "tel":"(195) 100-3534"
+  },
+  {
+    "name":"Jason Bourne",
+    "tel":"(968) 814-6975"
+  },
+  {
+    "name":"Tim Donohue",
+    "tel":"(415) 300-5092"
+  },
+  {
+    "name":"Sam Fisher",
+    "tel":"(503) 714-6084"
+  },
+  {
+    "name":"Stephen Metcalfe",
+    "tel":"(590) 021-2511"
+  },
+  {
+    "name":"Jack Ryan",
+    "tel":"(371) 332-0309"
+  },
+  {
+    "name":"Nick Fury",
+    "tel":"(437) 914-3192"
+  },
+  {
+    "name":"Ada Wong",
+    "tel":"(415) 014-3944"
+  },
+  {
+    "name":"Jack Bauer",
+    "tel":"(415) 904-7370"
+  },
+  {
+    "name":"Sydney Bristow",
+    "tel":"(326) 778-6931"
+  },
+  {
+    "name":"Ethan Hunt",
+    "tel":"(415) 937-3942"
+  },
+  {
+    "name":"Wyman Ford",
+    "tel":"(826) 680-3347"
+  },
+  {
+    "name":"Nick Carter-Killmaster",
+    "tel":"(873) 393-7359"
+  },
+  {
+    "name":"Johnny Fedora",
+    "tel":"(416) 752-4420"
+  },
+  {
+    "name":"Tamara Knight",
+    "tel":"(416) 104-4478"
+  },
+  {
+    "name":"Mitch Rapp",
+    "tel":"(416) 863-2988"
+  },
+  {
+    "name":"Michael Jagger",
+    "tel":"(416) 272-5564"
+  },
+  {
+    "name":"George Smiley",
+    "tel":"(416) 049-8897"
+  },
+  {
+    "name":"Simon Templar",
+    "tel":"(805) 687-8498"
+  },
+  {
+    "name":"Philip Quest",
+    "tel":"(647) 084-4730"
+  },
+  {
+    "name":"Mortadelo Pi",
+    "tel":"(647) 018-7675"
+  },
+  {
+    "name":"Filemón Pi",
+    "tel":"(647) 593-9832"
+  },
+  {
+    "name":"Maria Hill",
+    "tel":"(647) 569-5749"
+  }
+]
+
+
+},{}],2:[function(require,module,exports){"use strict";
+
+var slicer = Array.prototype.slice
+
+module.exports = compose
+function compose() {
+  /**
+  Returns the composition of a list of functions, where each function
+  consumes the return value of the function that follows. In math
+  terms, composing the functions `f()`, `g()`, and `h()` produces
+  `f(g(h()))`.
+  Usage:
+  var greet = function(name) { return 'hi: ' + name }
+  var exclaim = function(statement) { return statement + '!' }
+  var welcome = compose(exclaim, greet)
+  welcome('moe')
+  // => 'hi: moe!'
+  **/
+
+  var lambdas = slicer.call(arguments)
+  return function composed() {
+    var params = slicer.call(arguments)
+    var index = lambdas.length
+    var result = [lambdas[--index].apply(this, params)]
+    while (0 <= --index) result[0] = lambdas[index].apply(this, result)
+    return result[0]
+  }
+}
+
+},{}],3:[function(require,module,exports){"use strict";
+
+var reducible = require("reducible/reducible");
+var isReduced = require("reducible/is-reduced");
+
+function fps(desiredFps) {
+  // Create a stream of times to use as an event loop with
+  // https://github.com/Gozala/coreduction/blob/master/coreduction.js
+  // Number -> Reducible[Float time, Float time, ...]
+
+  // Convert seconds to milliseconds.
+  var msPerFrame = 1000 / desiredFps
+
+  return reducible(function reduceFps(next, result) {
+    var intervalId = setInterval(function tick() {
+      // Pass current time to `next()`, and accumulate result.
+      result = next(Date.now(), result);
+      // If value has been reduced, clear interval.
+      if(isReduced(result)) clearInterval(intervalId);
+    }, msPerFrame);
+  });
+}
+
+module.exports = fps;
+
+
+},{"reducible/reducible":4,"reducible/is-reduced":5}],6:[function(require,module,exports){"use strict";
+
+var reducible = require("reducible/reducible");
+var end = require('reducible/end'); 
+
+function geneology(el, maxDepth) {
+  maxDepth = (maxDepth == null ? Number.POSITIVE_INFINITY : maxDepth);
+  var depth = 0;
+  return reducible(function reduceAncestors(next, result) {
+    result = next(el, result);
+    while (((el = el.parentNode) != null) && (depth < maxDepth)) {
+      result = next(el, result);
+      depth++;
+    }
+    next(end, result);
+  });
+}
+module.exports = geneology;
+
+},{"reducible/reducible":4,"reducible/end":7}],8:[function(require,module,exports){"use strict";
+
+var reducer = require("./reducer")
+
+var map = reducer(function map(f, next, value, result) {
+  /**
+  Returns transformed version of given `source` where each item of it
+  is mapped using `f`.
+
+  ## Example
+
+  var data = [{ name: "foo" }, { name: "bar" }]
+  var names = map(data, function(value) { return value.name })
+  print(names) // => < "foo" "bar" >
+  **/
+  next(f(value), result)
+})
+
+module.exports = map
+
+},{"./reducer":9}],10:[function(require,module,exports){"use strict";
+
+var reducer = require("./reducer")
+
+var filter = reducer(function filter(predicate, next, value, result) {
+  /**
+  Composes filtered version of given `source`, such that only items contained
+  will be once on which `f(item)` was `true`.
+
+  ## Example
+
+  var digits = filter([ 10, 23, 2, 7, 17 ], function(value) {
+    return value >= 0 && value <= 9
+  })
+  print(digits) // => < 2 7 >
+  **/
+  return predicate(value) ? next(value, result) :
+         result
+})
+
+module.exports = filter
+
+},{"./reducer":9}],11:[function(require,module,exports){"use strict";
+
+var merge = require("./merge")
+var map = require("./map")
+
+function expand(source, f) {
+  /**
+  Takes `source` sequence maps each item via `f` to a new sequence
+  and then flattens them down into single form sequence. Note that
+  returned sequence will have items ordered by time and not by index,
+  if you wish opposite you need to force sequential order by wrapping
+  `source` into `sequential` before passing it.
+
+  ## Example
+
+  var sequence = expand([ 1, 2, 3 ], function(x) {
+    return [ x, x * x ]
+  })
+  print(sequence)   // => < 1 1 2 4 3 9 >
+
+  **/
+  return merge(map(source, f))
+}
+
+module.exports = expand
+
+},{"./merge":12,"./map":8}],13:[function(require,module,exports){/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -36,6 +314,11 @@ var dropRepeats = require('transducer/drop-repeats');
 var geneology = require('./geneology-reduce.js');
 
 var grep = require('grep-reduce/grep');
+
+var zip = require('zip-reduce');
+
+var Pattern = require('pattern-exp');
+
 var compose = require('functional/compose');
 
 function lambda(method) {
@@ -98,13 +381,15 @@ function createNodes(string) {
 }
 
 function mapContactToHtmlString(contact) {
-  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
+  var highlightedTel = contact.tel.replace(contact.pattern, '<b>$1</b>');
+  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + highlightedTel + '</div></li>';
 }
 
-// Doesn't work properly. Write test plz.
-function extend(obj) {
-  return reduce(slice(arguments, 1), function (obj, objN) {
-    return reduce(Object.keys(objN), function (obj, key) {
+function extend(obj/* obj1, obj2, objN */) {
+  // Copy all keys and values of obj1..objN to obj.
+  // Mutates obj. Tip: use `Object.create` to copy values to a new object.
+  return Array.prototype.slice.call(arguments, 1).reduce(function (obj, objN) {
+    return Object.keys(objN).reduce(function (obj, key) {
       obj[key] = objN[key];
       return obj;
     }, obj);
@@ -252,8 +537,8 @@ function dialerCompletionFolder(el, found) {
 function liftMap(lambda) {
   // Transform a function, making it a mapping function.
   // (z -> y) -> ([x, x, ...] -> [y, y, ...])
-  return function liftedMapper(array) {
-    return map(array, lambda);
+  return function liftedMapper(reducible) {
+    return map(reducible, lambda);
   }
 }
 
@@ -301,12 +586,27 @@ var completionsToggleTapsOverTime = filter(tapsOverTime, function isEventTargetF
   return hasClass(event.target, 'dialer-completions-toggle');
 });
 
+var dialTapsOverTime = filter(tapsOverTime, function filterSubmitTaps(event) {
+  // Filter a stream of taps on the 'dial' element.
+  return hasClass(event.target, 'dialer-dial');
+});
+
+var disconnectTapsOverTime = filter(tapsOverTime, function filterDisconnectTaps(event) {
+  // Filter a stream of taps on the 'disconnect' element.
+  return hasClass(event.target, 'dialer-disconnect');
+});
+
+var dialAndDisconnectTapsOverTime = merge([disconnectTapsOverTime, dialTapsOverTime]);
+
+var disconnectSOQsOverTime = map(disconnectTapsOverTime, SOQ);
+
 var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetFromDialpad(event) {
   return hasClass(event.target, 'dialer-button') || hasClass(event.target, 'dialer-delete');
 });
 
 var charCodesOverTime = merge([
   completionCharCodesOverTime,
+  disconnectSOQsOverTime,
   map(dialButtonTapsOverTime, getEventTargetValue)
 ]);
 
@@ -323,6 +623,54 @@ var queriesOverTime = dropRepeats(valuesOverTime);
 
 var displayValuesOverTime = map(queriesOverTime, formatTel);
 
+// Split the stream into 2, one for whitespace and one for values.
+// This lets us avoid grepping for empty values.
+var emptiesVsQueriesOverTime = fork(queriesOverTime, function (value) {
+  return isOnlyWhitespace(value);
+});
+
+// Transform empty queries into empty result sets.
+// Empty queries are typically spawned when hitting the delete key all the
+// way back.
+var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
+  return [];
+});
+
+var patternsOverTime = map(emptiesVsQueriesOverTime[1], function (value) {
+  return Pattern(value);
+});
+
+// [value...] -> [[value, [result...]]...]
+var grepResultsOverTime = map(patternsOverTime, grepContacts);
+
+// [query...], [[result...]...] -> [[query, [result...]...]...]
+var queriesAndResultsOverTime = zip(emptiesVsQueriesOverTime[1], grepResultsOverTime);
+
+// [[pattern, [result...]...]...] -> [[contact...]...]
+var templateResultSetsOverTime = map(queriesAndResultsOverTime, function (pair) {
+  var query = pair[0];
+  var pattern = Pattern(
+    '(' +
+    // Try to match a leading parenthesis, but can be not there, too.
+    '\\(?' +
+    // Allow any number of non-numeric characters between numbers.
+    query.split('').join('\\D*') +
+    ')'
+  );
+
+  return map(pair[1], function (result) {
+    var contact = result[0];
+
+    return extend(Object.create(contact), {
+      score: result[1],
+      query: query,
+      pattern: pattern
+    });
+  });
+});
+
+var allResultsOverTime = merge([emptyResultSetsOverTime, templateResultSetsOverTime]);
+
 // 1-dimensional signal with `SOQ` delimeters indicating a query has started.
 //
 // Visualizing the list:
@@ -333,10 +681,8 @@ var displayValuesOverTime = map(queriesOverTime, formatTel);
 //
 // Use `dropRepeats` to remove adjacent repeat SOQs from signal. We don't need to
 // react to the same thing 2x.
-var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
-  // If the value is only whitespace, return an empty list with an SOQ token.
-  // Otherwise, search for matches.
-  return isOnlyWhitespace(value) ? [SOQ()] : concat(SOQ(), grepContacts(value));
+var everythingOverTime = dropRepeats(expand(allResultsOverTime, function (reducible) {
+  return concat(SOQ(), reducible);
 }));
 
 // Here we accumulate possible permutations of the 1-dimensional list over time
@@ -355,22 +701,20 @@ var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results
 });
 
 // Limit the throttled permutations to 10 top scorers.
-var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
+var topContactSetsOverTime = map(sortedResultSetsOverTime, function (results) {
   return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-// [[result...]...] -> [[contact...]...]
-var contactSetsOverTime = map(topResultSetsOverTime, liftMap(i0));
-
 // [[contact...]...] -> [[string...]...]
-var contactSetHtmlStringsOverTime = map(contactSetsOverTime, liftMap(mapContactToHtmlString));
+var contactSetHtmlStringsOverTime = map(topContactSetsOverTime, liftMap(mapContactToHtmlString));
 
 // [[string...]...] -> [string...]
 var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrings) {
   return fold(htmlStrings, stringConcatFolder, '');
 });
 
-var countsOverTime = map(topResultSetsOverTime, function (results) {
+// [[result...]...] -> [Number...]
+var countsOverTime = map(topContactSetsOverTime, function (results) {
   return results.length;
 });
 
@@ -381,17 +725,18 @@ var moreTextOverTime = map(moreCountsOverTime, function (number) {
 });
 
 var completionsEl = document.getElementById('dialer-completions');
-var resultEl = document.getElementById('dialer-result');
+var contactEl = document.getElementById('dialer-contact');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
+var dialerCardEl = document.getElementById('dialer-card');
 
 fold(countsOverTime, function (count, completionsToggleEl) {
-  completionsEl.classList.remove('dialer-completions-open');
+  if(count < 2) completionsEl.classList.remove('dialer-completions-open');
   return setStyle(completionsToggleEl, 'display', (count > 1 ? 'block' : 'none'));
 }, completionsToggleEl);
 
 fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
-fold(displayValuesOverTime, setInnerHtmlFolder, resultEl);
+fold(displayValuesOverTime, setInnerHtmlFolder, contactEl);
 
 fold(resultsHtmlOverTime, setInnerHtmlFolder, completionsEl);
 
@@ -403,285 +748,18 @@ fold(completionsToggleTapsOverTime, function(event, completionsEl) {
   return completionsEl;
 }, completionsEl);
 
-},{"./data/contacts.json":2,"./fps-reduce.js":3,"./geneology-reduce.js":4,"reducers/fold":5,"reducers/filter":6,"reducers/map":7,"reducers/merge":8,"reducers/reductions":9,"reducers/concat":10,"reducers/expand":11,"reducers/debug/print":12,"dom-reduce/event":13,"sample/sample":14,"coreduction/coreduction":15,"transducer/drop-repeats":16,"grep-reduce/grep":17,"functional/compose":18}],2:[function(require,module,exports){module.exports=[
-  {
-    "name":"Matt Helm",
-    "tel":"(503) 177-2938"
-  },
-  {
-    "name":"Hal Ambler",
-    "tel":"(503) 877-6932"
-  },
-  {
-    "name":"Ali Imran",
-    "tel":"(503) 625-2445"
-  },
-  {
-    "name":"Jane Blonde",
-    "tel":"(198) 828-5828"
-  },
-  {
-    "name":"Basil Argyros",
-    "tel":"(389) 412-5035"
-  },
-  {
-    "name":"Modesty Blaise",
-    "tel":"(196) 764-8078"
-  },
-  {
-    "name":"Sir Alan Blunt",
-    "tel":"(415) 281-7417"
-  },
-  {
-    "name":"James Bond",
-    "tel":"(596) 630-1354"
-  },
-  {
-    "name":"Felix Leiter",
-    "tel":"(437) 897-8009"
-  },
-  {
-    "name":"Nancy Drew",
-    "tel":"(948) 691-8816"
-  },
-  {
-    "name":"Sherlock Holmes",
-    "tel":"(195) 100-3534"
-  },
-  {
-    "name":"Jason Bourne",
-    "tel":"(968) 814-6975"
-  },
-  {
-    "name":"Tim Donohue",
-    "tel":"(415) 300-5092"
-  },
-  {
-    "name":"Sam Fisher",
-    "tel":"(503) 714-6084"
-  },
-  {
-    "name":"Stephen Metcalfe",
-    "tel":"(590) 021-2511"
-  },
-  {
-    "name":"Jack Ryan",
-    "tel":"(371) 332-0309"
-  },
-  {
-    "name":"Nick Fury",
-    "tel":"(437) 914-3192"
-  },
-  {
-    "name":"Ada Wong",
-    "tel":"(415) 014-3944"
-  },
-  {
-    "name":"Jack Bauer",
-    "tel":"(415) 904-7370"
-  },
-  {
-    "name":"Sydney Bristow",
-    "tel":"(326) 778-6931"
-  },
-  {
-    "name":"Ethan Hunt",
-    "tel":"(415) 937-3942"
-  },
-  {
-    "name":"Wyman Ford",
-    "tel":"(826) 680-3347"
-  },
-  {
-    "name":"Nick Carter-Killmaster",
-    "tel":"(873) 393-7359"
-  },
-  {
-    "name":"Johnny Fedora",
-    "tel":"(416) 752-4420"
-  },
-  {
-    "name":"Tamara Knight",
-    "tel":"(416) 104-4478"
-  },
-  {
-    "name":"Mitch Rapp",
-    "tel":"(416) 863-2988"
-  },
-  {
-    "name":"Michael Jagger",
-    "tel":"(416) 272-5564"
-  },
-  {
-    "name":"George Smiley",
-    "tel":"(416) 049-8897"
-  },
-  {
-    "name":"Simon Templar",
-    "tel":"(805) 687-8498"
-  },
-  {
-    "name":"Philip Quest",
-    "tel":"(647) 084-4730"
-  },
-  {
-    "name":"Mortadelo Pi",
-    "tel":"(647) 018-7675"
-  },
-  {
-    "name":"Filemón Pi",
-    "tel":"(647) 593-9832"
-  },
-  {
-    "name":"Maria Hill",
-    "tel":"(647) 569-5749"
+fold(dialAndDisconnectTapsOverTime, function (event, dialerCardEl) {
+  event.preventDefault();
+  if(hasClass(event.target, 'dialer-dial')) {
+    dialerCardEl.classList.add('dialer-card-flipped');
   }
-]
-
-
-},{}],18:[function(require,module,exports){"use strict";
-
-var slicer = Array.prototype.slice
-
-module.exports = compose
-function compose() {
-  /**
-  Returns the composition of a list of functions, where each function
-  consumes the return value of the function that follows. In math
-  terms, composing the functions `f()`, `g()`, and `h()` produces
-  `f(g(h()))`.
-  Usage:
-  var greet = function(name) { return 'hi: ' + name }
-  var exclaim = function(statement) { return statement + '!' }
-  var welcome = compose(exclaim, greet)
-  welcome('moe')
-  // => 'hi: moe!'
-  **/
-
-  var lambdas = slicer.call(arguments)
-  return function composed() {
-    var params = slicer.call(arguments)
-    var index = lambdas.length
-    var result = [lambdas[--index].apply(this, params)]
-    while (0 <= --index) result[0] = lambdas[index].apply(this, result)
-    return result[0]
+  else if(hasClass(event.target, 'dialer-disconnect')) {
+    dialerCardEl.classList.remove('dialer-card-flipped');
   }
-}
+  return dialerCardEl;
+}, dialerCardEl);
 
-},{}],3:[function(require,module,exports){"use strict";
-
-var reducible = require("reducible/reducible");
-var isReduced = require("reducible/is-reduced");
-
-function fps(desiredFps) {
-  // Create a stream of times to use as an event loop with
-  // https://github.com/Gozala/coreduction/blob/master/coreduction.js
-  // Number -> Reducible[Float time, Float time, ...]
-
-  // Convert seconds to milliseconds.
-  var msPerFrame = 1000 / desiredFps
-
-  return reducible(function reduceFps(next, result) {
-    var intervalId = setInterval(function tick() {
-      // Pass current time to `next()`, and accumulate result.
-      result = next(Date.now(), result);
-      // If value has been reduced, clear interval.
-      if(isReduced(result)) clearInterval(intervalId);
-    }, msPerFrame);
-  });
-}
-
-module.exports = fps;
-
-
-},{"reducible/reducible":19,"reducible/is-reduced":20}],4:[function(require,module,exports){"use strict";
-
-var reducible = require("reducible/reducible");
-var end = require('reducible/end'); 
-
-function geneology(el, maxDepth) {
-  maxDepth = (maxDepth == null ? Number.POSITIVE_INFINITY : maxDepth);
-  var depth = 0;
-  return reducible(function reduceAncestors(next, result) {
-    result = next(el, result);
-    while (((el = el.parentNode) != null) && (depth < maxDepth)) {
-      result = next(el, result);
-      depth++;
-    }
-    next(end, result);
-  });
-}
-module.exports = geneology;
-
-},{"reducible/reducible":19,"reducible/end":21}],6:[function(require,module,exports){"use strict";
-
-var reducer = require("./reducer")
-
-var filter = reducer(function filter(predicate, next, value, result) {
-  /**
-  Composes filtered version of given `source`, such that only items contained
-  will be once on which `f(item)` was `true`.
-
-  ## Example
-
-  var digits = filter([ 10, 23, 2, 7, 17 ], function(value) {
-    return value >= 0 && value <= 9
-  })
-  print(digits) // => < 2 7 >
-  **/
-  return predicate(value) ? next(value, result) :
-         result
-})
-
-module.exports = filter
-
-},{"./reducer":22}],7:[function(require,module,exports){"use strict";
-
-var reducer = require("./reducer")
-
-var map = reducer(function map(f, next, value, result) {
-  /**
-  Returns transformed version of given `source` where each item of it
-  is mapped using `f`.
-
-  ## Example
-
-  var data = [{ name: "foo" }, { name: "bar" }]
-  var names = map(data, function(value) { return value.name })
-  print(names) // => < "foo" "bar" >
-  **/
-  next(f(value), result)
-})
-
-module.exports = map
-
-},{"./reducer":22}],11:[function(require,module,exports){"use strict";
-
-var merge = require("./merge")
-var map = require("./map")
-
-function expand(source, f) {
-  /**
-  Takes `source` sequence maps each item via `f` to a new sequence
-  and then flattens them down into single form sequence. Note that
-  returned sequence will have items ordered by time and not by index,
-  if you wish opposite you need to force sequential order by wrapping
-  `source` into `sequential` before passing it.
-
-  ## Example
-
-  var sequence = expand([ 1, 2, 3 ], function(x) {
-    return [ x, x * x ]
-  })
-  print(sequence)   // => < 1 1 2 4 3 9 >
-
-  **/
-  return merge(map(source, f))
-}
-
-module.exports = expand
-
-},{"./merge":8,"./map":7}],23:[function(require,module,exports){var events = require('events');
+},{"./data/contacts.json":1,"./fps-reduce.js":3,"./geneology-reduce.js":6,"reducers/fold":14,"reducers/filter":10,"reducers/map":8,"reducers/merge":12,"reducers/reductions":15,"reducers/concat":16,"reducers/expand":11,"reducers/debug/print":17,"dom-reduce/event":18,"sample/sample":19,"coreduction/coreduction":20,"transducer/drop-repeats":21,"grep-reduce/grep":22,"functional/compose":2,"zip-reduce":23,"pattern-exp":24}],25:[function(require,module,exports){var events = require('events');
 
 exports.isArray = isArray;
 exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
@@ -1033,11 +1111,58 @@ exports.format = function(f) {
   return str;
 };
 
-},{"events":24}],21:[function(require,module,exports){"use strict";
+},{"events":26}],7:[function(require,module,exports){"use strict";
 
 module.exports = String("End of the collection")
 
-},{}],5:[function(require,module,exports){"use strict";
+},{}],24:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+/*jshint asi: true undef: true es5: true node: true browser: true devel: true
+         forin: true latedef: false globalstrict: true*/
+
+"use strict";
+
+var stirgifier = Object.prototype.toString
+var ESCAPE_PATTERN = /[\.\?\*\+\^\$\|\(\)\{\[\]\\]/g
+
+function escape(pattern) {
+  /**
+  Returns the `pattern` with all regexp meta characters in it backslashed.
+  **/
+  return String(pattern).replace(ESCAPE_PATTERN, '\\$&')
+}
+escape.pattern = ESCAPE_PATTERN
+
+function Pattern(pattern, flags) {
+  /**
+  Function takes `pattern` string or regexp & optional flags string,
+  which is just regexp flags and returns instance of `RegExp` by actually
+  calling it. If pattern fails to compile it will escaped given pattern and
+  compile it to regexp after.
+
+  ## examples
+ 
+  RegExp("[")          // => SyntaxError("unterminated character class")
+  RegExp(/:/, "y")     // => TypeError("can't supply flags when ...")
+  Pattern("[")          // => /\[/
+  Pattern(/:/, "y")     // => /:/
+  **/
+  if (!pattern.exec) {
+    try {
+      pattern = RegExp(pattern, flags)
+    } catch (exception) {
+      if (exception instanceof SyntaxError)
+        pattern = RegExp(escape(pattern), flags)
+      else
+        throw exception
+    }
+  }
+  return pattern
+}
+Pattern.escape = escape
+
+module.exports = Pattern
+
+},{}],14:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var isError = require("reducible/is-error")
@@ -1093,7 +1218,7 @@ function fold(source, next, initial) {
 
 module.exports = fold
 
-},{"reducible/reduce":25,"reducible/is-error":26,"reducible/is-reduced":20,"reducible/end":21,"eventual/deliver":27,"eventual/type":28,"eventual/defer":29,"eventual/when":30}],8:[function(require,module,exports){"use strict";
+},{"reducible/reduce":27,"reducible/is-error":28,"reducible/is-reduced":5,"reducible/end":7,"eventual/type":29,"eventual/deliver":30,"eventual/defer":31,"eventual/when":32}],12:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1144,7 +1269,7 @@ function merge(source) {
 
 module.exports = merge
 
-},{"reducible/reduce":25,"reducible/reducible":19,"reducible/end":21,"reducible/is-error":26}],9:[function(require,module,exports){"use strict";
+},{"reducible/reduce":27,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":28}],15:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1176,7 +1301,7 @@ function reductions(source, f, initial) {
 
 module.exports = reductions
 
-},{"reducible/reduce":25,"reducible/reducible":19,"reducible/end":21,"reducible/is-error":26}],10:[function(require,module,exports){"use strict";
+},{"reducible/reduce":27,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":28}],16:[function(require,module,exports){"use strict";
 
 var reducible = require("reducible/reducible")
 var reduce = require("reducible/reduce")
@@ -1214,7 +1339,7 @@ function concat(left, right /*, ...rest*/) {
 
 module.exports = concat
 
-},{"reducible/reducible":19,"reducible/reduce":25,"reducible/end":21}],13:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{"reducible/reducible":4,"reducible/reduce":27,"reducible/end":7}],18:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true */
 
@@ -1254,7 +1379,7 @@ function open(target, type, options) {
 
 module.exports = open
 
-},{"reducible/reducible":19,"reducible/is-reduced":20}],14:[function(require,module,exports){"use strict";
+},{"reducible/reducible":4,"reducible/is-reduced":5}],19:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1334,7 +1459,7 @@ function sample(input, trigger, assemble) {
 
 module.exports = sample
 
-},{"reducible/reduce":25,"reducible/reducible":19,"reducible/reduced":31,"reducible/end":21,"reducible/is-reduced":20,"reducible/is-error":26}],19:[function(require,module,exports){(function(){"use strict";
+},{"reducible/reduce":27,"reducible/reducible":4,"reducible/reduced":33,"reducible/end":7,"reducible/is-reduced":5,"reducible/is-error":28}],4:[function(require,module,exports){(function(){"use strict";
 
 var reduce = require("./reduce")
 var end = require("./end")
@@ -1423,7 +1548,7 @@ reducible.type = Reducible
 module.exports = reducible
 
 })()
-},{"./reduce":25,"./end":21,"./is-error":26,"./is-reduced":20,"./reduced":31}],20:[function(require,module,exports){"use strict";
+},{"./reduce":27,"./end":7,"./is-error":28,"./is-reduced":5,"./reduced":33}],5:[function(require,module,exports){"use strict";
 
 var reduced = require("./reduced")
 
@@ -1433,7 +1558,7 @@ function isReduced(value) {
 
 module.exports = isReduced
 
-},{"./reduced":31}],15:[function(require,module,exports){"use strict";
+},{"./reduced":33}],20:[function(require,module,exports){"use strict";
 
 var reducible = require("reducible/reducible")
 var reduced = require("reducible/reduced")
@@ -1500,7 +1625,7 @@ function coreduction(left, right, assemble) {
 
 module.exports = coreduction
 
-},{"reducible/reducible":19,"reducible/reduced":31,"reducible/is-error":26,"reducible/end":21,"reducible/is-reduced":20,"reducible/reduce":25}],16:[function(require,module,exports){"use strict";
+},{"reducible/reducible":4,"reducible/reduced":33,"reducible/end":7,"reducible/is-error":28,"reducible/is-reduced":5,"reducible/reduce":27}],21:[function(require,module,exports){"use strict";
 
 var reductions = require("reducers/reductions")
 var filter = require("reducers/filter")
@@ -1543,7 +1668,7 @@ function dropRepeats(input, assert) {
 
 module.exports = dropRepeats
 
-},{"reducers/reductions":9,"reducers/filter":6,"reducers/map":7}],32:[function(require,module,exports){// shim for using process in browser
+},{"reducers/reductions":15,"reducers/filter":10,"reducers/map":8}],34:[function(require,module,exports){// shim for using process in browser
 
 var process = module.exports = {};
 
@@ -1596,7 +1721,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],24:[function(require,module,exports){(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
+},{}],26:[function(require,module,exports){(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
 var isArray = typeof Array.isArray === 'function'
@@ -1781,7 +1906,7 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":32}],26:[function(require,module,exports){"use strict";
+},{"__browserify_process":34}],28:[function(require,module,exports){"use strict";
 
 var stringifier = Object.prototype.toString
 
@@ -1791,7 +1916,7 @@ function isError(value) {
 
 module.exports = isError
 
-},{}],31:[function(require,module,exports){"use strict";
+},{}],33:[function(require,module,exports){"use strict";
 
 
 // Exported function can be used for boxing values. This boxing indicates
@@ -1807,7 +1932,7 @@ function reduced(value) {
 
 module.exports = reduced
 
-},{}],12:[function(require,module,exports){(function(process){"use strict";
+},{}],17:[function(require,module,exports){(function(process){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1854,7 +1979,7 @@ function print(source) {
 module.exports = print
 
 })(require("__browserify_process"))
-},{"util":23,"reducible/reduce":25,"reducible/reducible":19,"reducible/end":21,"reducible/is-error":26,"__browserify_process":32}],33:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{"util":25,"reducible/reduce":27,"reducible/end":7,"reducible/reducible":4,"reducible/is-error":28,"__browserify_process":34}],35:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true*/
 
@@ -1883,7 +2008,7 @@ score.make = Calculator
 
 module.exports = score
 
-},{}],27:[function(require,module,exports){"use strict";
+},{}],30:[function(require,module,exports){"use strict";
 
 // Anyone crating an eventual will likely need to realize it, requiring
 // dependency on other package is complicated, not to mention that one
@@ -1891,14 +2016,14 @@ module.exports = score
 // well with each other. Exposing this solves the issues.
 module.exports = require("pending/deliver")
 
-},{"pending/deliver":34}],29:[function(require,module,exports){"use strict";
+},{"pending/deliver":36}],31:[function(require,module,exports){"use strict";
 
 var Eventual = require("./type")
 var defer = function defer() { return new Eventual() }
 
 module.exports = defer
 
-},{"./type":28}],22:[function(require,module,exports){(function(process){"use strict";
+},{"./type":29}],9:[function(require,module,exports){(function(process){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1951,7 +2076,7 @@ function reducer(process) {
 module.exports = reducer
 
 })(require("__browserify_process"))
-},{"reducible/reduce":25,"reducible/reducible":19,"reducible/is-error":26,"reducible/end":21,"__browserify_process":32}],17:[function(require,module,exports){"use strict";
+},{"reducible/reduce":27,"reducible/reducible":4,"reducible/is-error":28,"reducible/end":7,"__browserify_process":34}],22:[function(require,module,exports){"use strict";
 
 var filter = require("reducers/filter")
 var map = require("reducers/map")
@@ -1982,54 +2107,112 @@ function grep(pattern, data, serialize) {
 
 module.exports = grep
 
-},{"reducers/filter":6,"reducers/map":7,"match-score":33,"pattern-exp":35}],35:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
-/*jshint asi: true undef: true es5: true node: true browser: true devel: true
-         forin: true latedef: false globalstrict: true*/
+},{"reducers/filter":10,"reducers/map":8,"match-score":35,"pattern-exp":24}],23:[function(require,module,exports){"use strict";
 
-"use strict";
+var accumulate = require("reducible/reduce")
+var reduced = require("reducible/reduced")
+var isReduced = require("reducible/is-reduced")
+var isError = require("reducible/is-error")
+var end = require("reducible/end")
 
-var stirgifier = Object.prototype.toString
-var ESCAPE_PATTERN = /[\.\?\*\+\^\$\|\(\)\{\[\]\\]/g
+var map = require("reducers/map")
 
-function escape(pattern) {
-  /**
-  Returns the `pattern` with all regexp meta characters in it backslashed.
-  **/
-  return String(pattern).replace(ESCAPE_PATTERN, '\\$&')
-}
-escape.pattern = ESCAPE_PATTERN
+var slicer = Array.prototype.slice
 
-function Pattern(pattern, flags) {
-  /**
-  Function takes `pattern` string or regexp & optional flags string,
-  which is just regexp flags and returns instance of `RegExp` by actually
-  calling it. If pattern fails to compile it will escaped given pattern and
-  compile it to regexp after.
-
-  ## examples
- 
-  RegExp("[")          // => SyntaxError("unterminated character class")
-  RegExp(/:/, "y")     // => TypeError("can't supply flags when ...")
-  Pattern("[")          // => /\[/
-  Pattern(/:/, "y")     // => /:/
-  **/
-  if (!pattern.exec) {
-    try {
-      pattern = RegExp(pattern, flags)
-    } catch (exception) {
-      if (exception instanceof SyntaxError)
-        pattern = RegExp(escape(pattern), flags)
-      else
-        throw exception
+function makeAccumulator(side) {
+  var other = side === "left" ? "right" : "left"
+  return function accumulate(value, state) {
+    var queue = state[side]
+    var buffer = state[other]
+    var dispatch = state.next
+    // If consumer finished consumption, then notify stream.
+    if (state.closed)  return state.result
+    // If this is an end of this stream, close a queue to indicate
+    // no other value will be queued.
+    else if (value === end) {
+      if (isReduced(state)) return state
+      queue.closed = true
+      // If queue is empty, dispatch end of stream.
+      if (!queue.length) {
+        dispatch(value, state.result)
+        state.left = state.right = state.next = null
+        state.closed = true
+        state.result = reduced(result)
+      }
     }
+    else {
+      queue.push(value)
+      // If there is a buffered value on both streams shift and dispatch.
+      if (buffer.length) {
+        if (isError(buffer[0]))
+          dispatch(buffer.shift(), state.result)
+        else if (isError(queue[0]))
+          dispatch(queue.shift(), state.result)
+
+        if (buffer.length && queue.length) {
+          var result = dispatch([
+            state.left.shift(),
+            state.right.shift()
+          ], state.result)
+          // If consumer is done consumption or if buffer is empty and closed
+          // dispatch end, and mark stream ended to stop streams and queueing
+          // values too.
+          if (isReduced(result) || (buffer.closed && !buffer.length)) {
+            // Dispatch end of stream and cleanup state attributes.
+            dispatch(end, result)
+            state.left = state.right = state.next = null
+            state.closed = true
+            state.result = reduced(result)
+          } else {
+            state.result = result
+          }
+        }
+      }
+    }
+    return state
   }
-  return pattern
 }
-Pattern.escape = escape
 
-module.exports = Pattern
+var accumulateLeft = makeAccumulator("left")
+var accumulateRight = makeAccumulator("right")
 
-},{}],28:[function(require,module,exports){(function(){"use strict";
+function Zip() {}
+accumulate.define(Zip, function(zipped, next, start) {
+  var state = { result: start, next: next, left: [], right: [] }
+  accumulate(zipped.left, accumulateLeft, state)
+  accumulate(zipped.right, accumulateRight, state)
+})
+
+function array(item) { return [item] }
+
+function unite(value) {
+  value[0].push(value[1])
+  return value[0]
+}
+
+function concatzip(zipped, sequence) {
+  return map(zip(zipped, sequence), unite)
+}
+
+function zip(left, right/*, ...rest*/) {
+  switch (arguments.length) {
+    case 1:
+      return map(left, array)
+    case 2:
+      var value = new Zip()
+      value.left = left
+      value.right = right
+      value.leftQueue = []
+      value.rightQueue = []
+      return value
+    default:
+      return slicer.call(arguments, 2).reduce(concatzip, zip(left, right))
+  }
+}
+
+module.exports = zip
+
+},{"reducible/reduce":27,"reducible/reduced":33,"reducible/is-reduced":5,"reducible/is-error":28,"reducible/end":7,"reducers/map":8}],29:[function(require,module,exports){(function(){"use strict";
 
 var watchers = require("watchables/watchers")
 var watch = require("watchables/watch")
@@ -2188,7 +2371,7 @@ when.define(Eventual, function(value, onRealize, onError) {
 module.exports = Eventual
 
 })()
-},{"pending/await":36,"pending/is":37,"./deliver":27,"./when":30,"watchables/watchers":38,"watchables/watch":39}],25:[function(require,module,exports){"use strict";
+},{"pending/await":37,"pending/is":38,"./deliver":30,"./when":32,"watchables/watchers":39,"watchables/watch":40}],27:[function(require,module,exports){"use strict";
 
 var method = require("method")
 
@@ -2248,7 +2431,7 @@ reduce.define(reduce.singular)
 reduce.define(Error, function(error, next) { next(error) })
 module.exports = reduce
 
-},{"./is-reduced":20,"./is-error":26,"./end":21,"method":40}],30:[function(require,module,exports){"use strict";
+},{"./is-reduced":5,"./is-error":28,"./end":7,"method":41}],32:[function(require,module,exports){"use strict";
 
 var method = require("method")
 var when = method("when")
@@ -2262,7 +2445,7 @@ when.define(Error, function(error, onRealize, onError) {
 
 module.exports = when
 
-},{"method":40}],40:[function(require,module,exports){"use strict";
+},{"method":41}],41:[function(require,module,exports){"use strict";
 
 var defineProperty = Object.defineProperty || function(object, name, property) {
   object[name] = property.value
@@ -2488,15 +2671,7 @@ Method.host = host
 
 module.exports = Method
 
-},{}],34:[function(require,module,exports){"use strict";
-
-var method = require("method")
-// Method delivers pending value.
-var deliver = method("deliver")
-
-module.exports = deliver
-
-},{"method":40}],38:[function(require,module,exports){"use strict";
+},{}],39:[function(require,module,exports){"use strict";
 
 var method = require("method")
 
@@ -2505,18 +2680,7 @@ var method = require("method")
 var watchers = method("watchers")
 module.exports = watchers
 
-},{"method":40}],36:[function(require,module,exports){"use strict";
-
-var method = require("method")
-
-// Set's up a callback to be called once pending
-// value is realized. All object by default are realized.
-var await = method("await")
-await.define(function(value, callback) { callback(value) })
-
-module.exports = await
-
-},{"method":40}],39:[function(require,module,exports){"use strict";
+},{"method":41}],40:[function(require,module,exports){"use strict";
 
 var method = require("method")
 var watchers = require("./watchers")
@@ -2532,7 +2696,26 @@ watch.define(function(value, watcher) {
 
 module.exports = watch
 
-},{"./watchers":38,"method":40}],37:[function(require,module,exports){"use strict";
+},{"./watchers":39,"method":41}],37:[function(require,module,exports){"use strict";
+
+var method = require("method")
+
+// Set's up a callback to be called once pending
+// value is realized. All object by default are realized.
+var await = method("await")
+await.define(function(value, callback) { callback(value) })
+
+module.exports = await
+
+},{"method":41}],36:[function(require,module,exports){"use strict";
+
+var method = require("method")
+// Method delivers pending value.
+var deliver = method("deliver")
+
+module.exports = deliver
+
+},{"method":41}],38:[function(require,module,exports){"use strict";
 
 var method = require("method")
 
@@ -2545,4 +2728,4 @@ isPending.define(function() { return false })
 
 module.exports = isPending
 
-},{"method":40}]},{},[1]);
+},{"method":41}]},{},[13]);
