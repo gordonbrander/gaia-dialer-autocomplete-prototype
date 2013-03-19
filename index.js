@@ -21,6 +21,7 @@ var merge = require('reducers/merge');
 var reductions = require('reducers/reductions');
 var concat = require('reducers/concat');
 var expand = require('reducers/expand');
+var dropWhile = require('reducers/drop-while');
 var print = require('reducers/debug/print');
 
 var open = require('dom-reduce/event');
@@ -115,6 +116,10 @@ function mapContactToNameAndNumberHtmlString(contact) {
   // Title and subtitle
   var subtitle = contact.tel.replace(contact.pattern, '<b>$1</b>');
   return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + subtitle + '</div></li>';
+}
+
+function makeAddAsContactHtmlString(value) {
+  return '<li class="dialer-add-as-contact">Add to contacts</li>';
 }
 
 function extend(obj/* obj1, obj2, objN */) {
@@ -282,10 +287,13 @@ function stringConcatFolder(string, result) {
   return result + string;
 }
 
+var ESCAPE_PATTERN = /[\.\?\*\+\^\$\|\(\)\{\[\]\\]/g
+function replaceRegexSpecialCharsWithSpace(string) {
+  return string.replace(ESCAPE_PATTERN, ' ');
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
-
-var fpsStream = fps(20);
 
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
@@ -368,7 +376,11 @@ var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
   return [];
 });
 
-var patternsOverTime = map(emptiesVsQueriesOverTime[1], function (value) {
+// By replacing regex special characters with a space character, we make sure
+// that no number matches.
+var escapedQueriesOverTime = map(emptiesVsQueriesOverTime[1], replaceRegexSpecialCharsWithSpace);
+
+var patternsOverTime = map(escapedQueriesOverTime, function (value) {
   return Pattern(value);
 });
 
@@ -424,11 +436,23 @@ var resultSetReductionsOverTime = reductions(everythingOverTime, function (accum
   return isSOQ(thing) ? [] : accumulated.concat([thing]);
 }, []);
 
-// We don't need to sample the rolling buffer more than 20fps.
-var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
+// Sample the result reductions 20 times per second. This lets us quickly update the list
+// as new results come in.
+var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fps(30)));
+
+// Drop the first empty result set. Because of the way reductions are
+// accumulated, the first accumulation always ends up being empty.
+// This causes problems down the line, where you see the "add as contact" flash
+// for just a second after typing the first number.
+//
+// Dropping the empy value fixes the problem. Ideally, would be great to fix
+// this upstream somehow.
+var patchedThrottledResultSetsOverTime = dropWhile(throttledResultSetsOverTime, function (results) {
+  return results.length === 0;
+});
 
 // sort the throttled permutations.
-var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results) {
+var sortedResultSetsOverTime = map(patchedThrottledResultSetsOverTime, function(results) {
   return results.length > 0 ? sort(results, compareGrepScores) : results;
 });
 
@@ -443,6 +467,13 @@ var contactSetHtmlStringsOverTime = map(topContactSetsOverTime, liftMap(mapConta
 // [[string...]...] -> [string...]
 var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrings) {
   return fold(htmlStrings, stringConcatFolder, '');
+});
+
+var completionsHtmlOverTime = sample(valuesOverTime, resultsHtmlOverTime, function (value, resultsHtml) {
+  // If results HTML is empty and value is not, that means we didn't get back
+  // any results from our query. Instead of rendering an empty string, render
+  // the "add as contact" block.
+  return isOnlyWhitespace(resultsHtml) && !isOnlyWhitespace(value) ? makeAddAsContactHtmlString(value) : resultsHtml;
 });
 
 // [[result...]...] -> [Number...]
@@ -470,10 +501,10 @@ fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
 fold(displayValuesOverTime, setInnerHtmlFolder, contactEl);
 
-fold(resultsHtmlOverTime, setInnerHtmlFolder, completionsEl);
+fold(completionsHtmlOverTime, setInnerHtmlFolder, completionsEl);
 
 fold(completionsToggleTapsOverTime, function(event, completionsEl) {
-  var x = hasClass(completionsEl, 'dialer-completions-open') ?
+  hasClass(completionsEl, 'dialer-completions-open') ?
     completionsEl.classList.remove('dialer-completions-open') :
     completionsEl.classList.add('dialer-completions-open');
 
