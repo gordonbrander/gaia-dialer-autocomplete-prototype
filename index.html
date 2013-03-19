@@ -14,31 +14,41 @@
   <form class="dialer" action="" method="get">
     <button class="dialer-delete" type="button" value="8">Delete</button>
     <div class="dialer-contact" id="dialer-contact"></div>
-    <span class="dialer-completions-toggle" id="dialer-completions-toggle" style="display:none;"></span>
-    <ul class="dialer-completions" id="dialer-completions"></ul>
-    <div class="dialer-dialpad" id="dialer-dialpad">
-      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row1" type="button" value="49">1</button>
-      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row1" type="button" value="50">2<em>ABC</em></button>
-      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row1" type="button" value="51">3<em>DEF</em>
-</button>
-      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row2" type="button" value="52">4<em>GHI</em>
-</button>
-      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row2" type="button" value="53">5<em>JKL</em></button>
-      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row2" type="button" value="54">6<em>MNO</em>
-</button>
-      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row3" type="button" value="55">7<em>PQRS</em></button>
-      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row3" type="button" value="56">8<em>TUV</em></button>
-      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row3" type="button" value="57">9<em>WXYZ</em></button>
-      <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row4" type="button" value="48">0<em>+</em></button>
-      <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row4" type="button" value="42">*</button>
-      <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row4" type="button" value="35">#</button>
-    </div>
-    <button type="submit" class="dialer-dial"></button>
+    <div class="dialer-card-container">
+      <div class="dialer-card" id="dialer-card">
+        <div class="dialer-card-face-front">
+          <span class="dialer-completions-toggle" id="dialer-completions-toggle" style="display:none;"></span>
+          <ul class="dialer-completions" id="dialer-completions"></ul>
+          <div class="dialer-dialpad" id="dialer-dialpad">
+            <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row1" type="button" value="49">1</button>
+            <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row1" type="button" value="50">2<em>ABC</em></button>
+            <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row1" type="button" value="51">3<em>DEF</em>
+      </button>
+            <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row2" type="button" value="52">4<em>GHI</em>
+      </button>
+            <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row2" type="button" value="53">5<em>JKL</em></button>
+            <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row2" type="button" value="54">6<em>MNO</em>
+      </button>
+            <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row3" type="button" value="55">7<em>PQRS</em></button>
+            <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row3" type="button" value="56">8<em>TUV</em></button>
+            <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row3" type="button" value="57">9<em>WXYZ</em></button>
+            <button class="dialer-button dialer-dialpad-col2 dialer-dialpad-row4" type="button" value="48">0<em>+</em></button>
+            <button class="dialer-button dialer-dialpad-col1 dialer-dialpad-row4" type="button" value="42">*</button>
+            <button class="dialer-button dialer-dialpad-col3 dialer-dialpad-row4" type="button" value="35">#</button>
+          </div>
+          <button type="submit" class="dialer-dial"></button>
+        </div><!-- .dialer-card-face -->
+        <div class="dialer-card-face-back">
+          <div class="dialing" id="dialing">
+            <div class="dialer-calling">
+              
+            </div>
+            <button type="submit" class="dialer-disconnect"></button>
+          </div>
+        </div><!-- .dialer-card-face -->
+      </div><!-- .dialer-card -->
+    </div><!-- .dialer-card-container -->
   </form>
-  <div class="dialing" id="dialing" style="display:none;">
-    <div class="dialer-contact" id="dialer-contact"></div>
-    <button type="submit" class="dialer-disconnect"></button>
-  </div>
   <script src="bundle.js"></script>
 </body>
 </html>

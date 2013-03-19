@@ -1,5 +1,6 @@
 html {
-  color: #222;
+  background: #000;
+  color: #fff;
 }
 
 .dialer {
@@ -125,6 +126,50 @@ account for height with media queries if supporting multiple res. */
   top: 75%;
 }
 
+/* Dialer card
+----------------------------------------------------------------------------- */
+
+.dialer-card-container {
+  height: 370px;
+  -moz-perspective: 1000px;
+  perspective: 1000px;
+  position: relative;
+  width: 320px;
+}
+
+.dialer-card,
+.dialer-card-face-front,
+.dialer-card-face-back {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.dialer-card {
+  -moz-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  transition: transform 500ms linear;
+}
+
+.dialer-card-flipped {
+  -moz-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+.dialer-card-face-front,
+.dialer-card-face-back {
+  background: #222;
+  -moz-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.dialer-card-face-back {
+  -moz-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
 /* Dialer completions
 ----------------------------------------------------------------------------- */
 
@@ -168,4 +213,12 @@ account for height with media queries if supporting multiple res. */
   padding: 0 44px 0 10px;
   position: absolute;
   right: 0;
+}
+
+/* Dialer dialing menu
+----------------------------------------------------------------------------- */
+
+.dialer-calling {
+  background: url(assets/calling.png) center center no-repeat;
+  height: 320px;
 }
