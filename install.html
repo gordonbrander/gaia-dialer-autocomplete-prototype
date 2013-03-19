@@ -1,0 +1,25 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!doctype html>
+<html lang="en" class="screen">
+<head>
+	<meta charset="utf-8">
+	<title>Install dialer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="normalize.css" type="text/css" />
+</head>
+<body>
+  <button id="install" type="button">Install</button>
+  <script type="text/javascript" charset="utf-8">
+    if(navigator.mozApps) {
+      var btn = document.getElementById('install');
+
+      btn.addEventListener('click', function() {
+        navigator.mozApps.install('http://gordonbrander.github.com/gaia-dialer-autocomplete-prototype/manifest.webapp');
+      });
+    }
+  </script>
+</body>
+</html>
+

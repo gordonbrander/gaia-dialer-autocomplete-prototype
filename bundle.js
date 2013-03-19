@@ -212,26 +212,6 @@ module.exports = geneology;
 
 var reducer = require("./reducer")
 
-var map = reducer(function map(f, next, value, result) {
-  /**
-  Returns transformed version of given `source` where each item of it
-  is mapped using `f`.
-
-  ## Example
-
-  var data = [{ name: "foo" }, { name: "bar" }]
-  var names = map(data, function(value) { return value.name })
-  print(names) // => < "foo" "bar" >
-  **/
-  next(f(value), result)
-})
-
-module.exports = map
-
-},{"./reducer":9}],10:[function(require,module,exports){"use strict";
-
-var reducer = require("./reducer")
-
 var filter = reducer(function filter(predicate, next, value, result) {
   /**
   Composes filtered version of given `source`, such that only items contained
@@ -249,6 +229,26 @@ var filter = reducer(function filter(predicate, next, value, result) {
 })
 
 module.exports = filter
+
+},{"./reducer":9}],10:[function(require,module,exports){"use strict";
+
+var reducer = require("./reducer")
+
+var map = reducer(function map(f, next, value, result) {
+  /**
+  Returns transformed version of given `source` where each item of it
+  is mapped using `f`.
+
+  ## Example
+
+  var data = [{ name: "foo" }, { name: "bar" }]
+  var names = map(data, function(value) { return value.name })
+  print(names) // => < "foo" "bar" >
+  **/
+  next(f(value), result)
+})
+
+module.exports = map
 
 },{"./reducer":9}],11:[function(require,module,exports){"use strict";
 
@@ -276,7 +276,7 @@ function expand(source, f) {
 
 module.exports = expand
 
-},{"./merge":12,"./map":8}],13:[function(require,module,exports){/* This Source Code Form is subject to the terms of the Mozilla Public
+},{"./merge":12,"./map":10}],13:[function(require,module,exports){/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -800,7 +800,7 @@ fold(dialAndDisconnectTapsOverTime, function (event, dialerCardEl) {
   return dialerCardEl;
 }, dialerCardEl);
 
-},{"./data/contacts.json":1,"./fps-reduce.js":3,"./geneology-reduce.js":6,"reducers/fold":14,"reducers/filter":10,"reducers/map":8,"reducers/merge":12,"reducers/reductions":15,"reducers/concat":16,"reducers/expand":11,"reducers/drop-while":17,"reducers/debug/print":18,"dom-reduce/event":19,"sample/sample":20,"coreduction/coreduction":21,"transducer/drop-repeats":22,"grep-reduce/grep":23,"functional/compose":2,"zip-reduce":24,"pattern-exp":25}],26:[function(require,module,exports){var events = require('events');
+},{"./data/contacts.json":1,"./fps-reduce.js":3,"./geneology-reduce.js":6,"reducers/fold":14,"reducers/filter":8,"reducers/map":10,"reducers/merge":12,"reducers/reductions":15,"reducers/concat":16,"reducers/expand":11,"reducers/drop-while":17,"reducers/debug/print":18,"dom-reduce/event":19,"sample/sample":20,"coreduction/coreduction":21,"transducer/drop-repeats":22,"grep-reduce/grep":23,"functional/compose":2,"zip-reduce":24,"pattern-exp":25}],26:[function(require,module,exports){var events = require('events');
 
 exports.isArray = isArray;
 exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
@@ -1310,7 +1310,7 @@ function merge(source) {
 
 module.exports = merge
 
-},{"reducible/reduce":28,"reducible/end":7,"reducible/reducible":4,"reducible/is-error":29}],15:[function(require,module,exports){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":29}],15:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1420,7 +1420,7 @@ function dropWhile(source, predicate) {
 
 module.exports = dropWhile
 
-},{"reducible/reducible":4,"reducible/reduce":28,"reducible/end":7,"reducible/is-error":29}],19:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{"reducible/reducible":4,"reducible/reduce":28,"reducible/is-error":29,"reducible/end":7}],19:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true */
 
@@ -1540,7 +1540,7 @@ function sample(input, trigger, assemble) {
 
 module.exports = sample
 
-},{"reducible/reduce":28,"reducible/reducible":4,"reducible/reduced":34,"reducible/end":7,"reducible/is-reduced":5,"reducible/is-error":29}],4:[function(require,module,exports){(function(){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/end":7,"reducible/reduced":34,"reducible/is-reduced":5,"reducible/is-error":29}],4:[function(require,module,exports){(function(){"use strict";
 
 var reduce = require("./reduce")
 var end = require("./end")
@@ -1749,7 +1749,7 @@ function dropRepeats(input, assert) {
 
 module.exports = dropRepeats
 
-},{"reducers/reductions":15,"reducers/filter":10,"reducers/map":8}],35:[function(require,module,exports){// shim for using process in browser
+},{"reducers/reductions":15,"reducers/filter":8,"reducers/map":10}],35:[function(require,module,exports){// shim for using process in browser
 
 var process = module.exports = {};
 
@@ -2157,38 +2157,7 @@ function reducer(process) {
 module.exports = reducer
 
 })(require("__browserify_process"))
-},{"reducible/reduce":28,"reducible/reducible":4,"reducible/is-error":29,"reducible/end":7,"__browserify_process":35}],23:[function(require,module,exports){"use strict";
-
-var filter = require("reducers/filter")
-var map = require("reducers/map")
-var Pattern = require("pattern-exp")
-var score = require("match-score")
-
-function isPositiveScore(data) { return data[1] > 0 }
-
-function grep(pattern, data, serialize) {
-  /**
-  Function returns values from `data` paired with the match score for
-  `pattern`. If there is no match value will be excluded from the result.
-
-  ## Examples
-
-  **/
- 
-  if (typeof(serialize) !== "function") serialize = String
-  // Creating pattern from the given input.
-  pattern = Pattern(pattern || "", "i")
-  // Map to data value and pattern match score pairs.
-  var scoredData = map(data, function(value) {
-    return [ value, score(pattern, serialize(value)) ]
-  })
-  // Filter only matches who's score is positive.
-  return filter(scoredData, isPositiveScore)
-}
-
-module.exports = grep
-
-},{"reducers/filter":10,"reducers/map":8,"match-score":36,"pattern-exp":25}],24:[function(require,module,exports){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/is-error":29,"reducible/end":7,"__browserify_process":35}],24:[function(require,module,exports){"use strict";
 
 var accumulate = require("reducible/reduce")
 var reduced = require("reducible/reduced")
@@ -2293,7 +2262,38 @@ function zip(left, right/*, ...rest*/) {
 
 module.exports = zip
 
-},{"reducible/reduce":28,"reducible/reduced":34,"reducible/is-reduced":5,"reducible/is-error":29,"reducible/end":7,"reducers/map":8}],30:[function(require,module,exports){(function(){"use strict";
+},{"reducible/reduced":34,"reducible/reduce":28,"reducible/is-reduced":5,"reducible/is-error":29,"reducible/end":7,"reducers/map":10}],23:[function(require,module,exports){"use strict";
+
+var filter = require("reducers/filter")
+var map = require("reducers/map")
+var Pattern = require("pattern-exp")
+var score = require("match-score")
+
+function isPositiveScore(data) { return data[1] > 0 }
+
+function grep(pattern, data, serialize) {
+  /**
+  Function returns values from `data` paired with the match score for
+  `pattern`. If there is no match value will be excluded from the result.
+
+  ## Examples
+
+  **/
+ 
+  if (typeof(serialize) !== "function") serialize = String
+  // Creating pattern from the given input.
+  pattern = Pattern(pattern || "", "i")
+  // Map to data value and pattern match score pairs.
+  var scoredData = map(data, function(value) {
+    return [ value, score(pattern, serialize(value)) ]
+  })
+  // Filter only matches who's score is positive.
+  return filter(scoredData, isPositiveScore)
+}
+
+module.exports = grep
+
+},{"reducers/filter":8,"reducers/map":10,"match-score":36,"pattern-exp":25}],30:[function(require,module,exports){(function(){"use strict";
 
 var watchers = require("watchables/watchers")
 var watch = require("watchables/watch")
@@ -2752,7 +2752,16 @@ Method.host = host
 
 module.exports = Method
 
-},{}],41:[function(require,module,exports){"use strict";
+},{}],40:[function(require,module,exports){"use strict";
+
+var method = require("method")
+
+// Method is supposed to return array of watchers for the given
+// value.
+var watchers = method("watchers")
+module.exports = watchers
+
+},{"method":42}],41:[function(require,module,exports){"use strict";
 
 var method = require("method")
 var watchers = require("./watchers")
@@ -2779,6 +2788,14 @@ await.define(function(value, callback) { callback(value) })
 
 module.exports = await
 
+},{"method":42}],37:[function(require,module,exports){"use strict";
+
+var method = require("method")
+// Method delivers pending value.
+var deliver = method("deliver")
+
+module.exports = deliver
+
 },{"method":42}],39:[function(require,module,exports){"use strict";
 
 var method = require("method")
@@ -2791,22 +2808,5 @@ var isPending = method("is-pending")
 isPending.define(function() { return false })
 
 module.exports = isPending
-
-},{"method":42}],40:[function(require,module,exports){"use strict";
-
-var method = require("method")
-
-// Method is supposed to return array of watchers for the given
-// value.
-var watchers = method("watchers")
-module.exports = watchers
-
-},{"method":42}],37:[function(require,module,exports){"use strict";
-
-var method = require("method")
-// Method delivers pending value.
-var deliver = method("deliver")
-
-module.exports = deliver
 
 },{"method":42}]},{},[13]);

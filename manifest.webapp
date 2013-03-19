@@ -1,0 +1,10 @@
+{
+    "name": "Dialer Proto",
+    "description": "Dialer Autocomplete Prototype",
+    "developer": {
+      "name": "Mozilla",
+      "url": "https://github.com/gordonbrander/gaia-dialer-autocomplete-prototype"
+    },
+    "launch_path": "/gaia-dialer-autocomplete-prototype/index.html",
+    "orientation": "portrait-primary"
+}
