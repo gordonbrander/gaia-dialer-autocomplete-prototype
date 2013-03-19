@@ -296,9 +296,10 @@ function replaceRegexSpecialCharsWithSpace(string) {
 // ----------------------------------------------------------------------------
 
 var dialpadEl = document.getElementById('dialer-dialpad');
-var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
+var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'mousedown');
+var clicksOverTime = open(document.documentElement, 'click');
 
-var completionTapsOverTime = filter(tapsOverTime, function (event) {
+var completionTapsOverTime = filter(clicksOverTime, function (event) {
   // Search up the geneology tree for an element with the dialer-completion class.
   // The max depth of the geneology is 1. We don't want to search up the whole
   // tree!
