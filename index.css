@@ -204,6 +204,17 @@ account for height with media queries if supporting multiple res. */
   color: #fff;
 }
 
+.dialer-completion-match {
+  border-bottom: 1px solid #212932;
+  color: #fff;
+  line-height: 50px;
+  padding: 0 20px;
+}
+.dialer-completion-match > .title {
+  font-weight: normal;
+  font-size: 18px;
+}
+
 .dialer-completions-toggle {
   background: url(assets/sprite-a.y.png) right -200px no-repeat;
   color: #aeb9c4;
