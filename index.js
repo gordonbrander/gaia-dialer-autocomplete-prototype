@@ -36,6 +36,11 @@ var dropRepeats = require('transducer/drop-repeats');
 var geneology = require('./geneology-reduce.js');
 
 var grep = require('grep-reduce/grep');
+
+var zip = require('zip-reduce');
+
+var Pattern = require('pattern-exp');
+
 var compose = require('functional/compose');
 
 function lambda(method) {
@@ -98,13 +103,15 @@ function createNodes(string) {
 }
 
 function mapContactToHtmlString(contact) {
-  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + contact.tel + '</div></li>';
+  var highlightedTel = contact.tel.replace(contact.pattern, '<b>$1</b>');
+  return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + highlightedTel + '</div></li>';
 }
 
-// Doesn't work properly. Write test plz.
-function extend(obj) {
-  return reduce(slice(arguments, 1), function (obj, objN) {
-    return reduce(Object.keys(objN), function (obj, key) {
+function extend(obj/* obj1, obj2, objN */) {
+  // Copy all keys and values of obj1..objN to obj.
+  // Mutates obj. Tip: use `Object.create` to copy values to a new object.
+  return Array.prototype.slice.call(arguments, 1).reduce(function (obj, objN) {
+    return Object.keys(objN).reduce(function (obj, key) {
       obj[key] = objN[key];
       return obj;
     }, obj);
@@ -252,8 +259,8 @@ function dialerCompletionFolder(el, found) {
 function liftMap(lambda) {
   // Transform a function, making it a mapping function.
   // (z -> y) -> ([x, x, ...] -> [y, y, ...])
-  return function liftedMapper(array) {
-    return map(array, lambda);
+  return function liftedMapper(reducible) {
+    return map(reducible, lambda);
   }
 }
 
@@ -301,12 +308,27 @@ var completionsToggleTapsOverTime = filter(tapsOverTime, function isEventTargetF
   return hasClass(event.target, 'dialer-completions-toggle');
 });
 
+var dialTapsOverTime = filter(tapsOverTime, function filterSubmitTaps(event) {
+  // Filter a stream of taps on the 'dial' element.
+  return hasClass(event.target, 'dialer-dial');
+});
+
+var disconnectTapsOverTime = filter(tapsOverTime, function filterDisconnectTaps(event) {
+  // Filter a stream of taps on the 'disconnect' element.
+  return hasClass(event.target, 'dialer-disconnect');
+});
+
+var dialAndDisconnectTapsOverTime = merge([disconnectTapsOverTime, dialTapsOverTime]);
+
+var disconnectSOQsOverTime = map(disconnectTapsOverTime, SOQ);
+
 var dialButtonTapsOverTime = filter(tapsOverTime, function isEventTargetFromDialpad(event) {
   return hasClass(event.target, 'dialer-button') || hasClass(event.target, 'dialer-delete');
 });
 
 var charCodesOverTime = merge([
   completionCharCodesOverTime,
+  disconnectSOQsOverTime,
   map(dialButtonTapsOverTime, getEventTargetValue)
 ]);
 
@@ -323,6 +345,54 @@ var queriesOverTime = dropRepeats(valuesOverTime);
 
 var displayValuesOverTime = map(queriesOverTime, formatTel);
 
+// Split the stream into 2, one for whitespace and one for values.
+// This lets us avoid grepping for empty values.
+var emptiesVsQueriesOverTime = fork(queriesOverTime, function (value) {
+  return isOnlyWhitespace(value);
+});
+
+// Transform empty queries into empty result sets.
+// Empty queries are typically spawned when hitting the delete key all the
+// way back.
+var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
+  return [];
+});
+
+var patternsOverTime = map(emptiesVsQueriesOverTime[1], function (value) {
+  return Pattern(value);
+});
+
+// [value...] -> [[value, [result...]]...]
+var grepResultsOverTime = map(patternsOverTime, grepContacts);
+
+// [query...], [[result...]...] -> [[query, [result...]...]...]
+var queriesAndResultsOverTime = zip(emptiesVsQueriesOverTime[1], grepResultsOverTime);
+
+// [[pattern, [result...]...]...] -> [[contact...]...]
+var templateResultSetsOverTime = map(queriesAndResultsOverTime, function (pair) {
+  var query = pair[0];
+  var pattern = Pattern(
+    '(' +
+    // Try to match a leading parenthesis, but can be not there, too.
+    '\\(?' +
+    // Allow any number of non-numeric characters between numbers.
+    query.split('').join('\\D*') +
+    ')'
+  );
+
+  return map(pair[1], function (result) {
+    var contact = result[0];
+
+    return extend(Object.create(contact), {
+      score: result[1],
+      query: query,
+      pattern: pattern
+    });
+  });
+});
+
+var allResultsOverTime = merge([emptyResultSetsOverTime, templateResultSetsOverTime]);
+
 // 1-dimensional signal with `SOQ` delimeters indicating a query has started.
 //
 // Visualizing the list:
@@ -333,10 +403,8 @@ var displayValuesOverTime = map(queriesOverTime, formatTel);
 //
 // Use `dropRepeats` to remove adjacent repeat SOQs from signal. We don't need to
 // react to the same thing 2x.
-var everythingOverTime = dropRepeats(expand(queriesOverTime, function (value) {
-  // If the value is only whitespace, return an empty list with an SOQ token.
-  // Otherwise, search for matches.
-  return isOnlyWhitespace(value) ? [SOQ()] : concat(SOQ(), grepContacts(value));
+var everythingOverTime = dropRepeats(expand(allResultsOverTime, function (reducible) {
+  return concat(SOQ(), reducible);
 }));
 
 // Here we accumulate possible permutations of the 1-dimensional list over time
@@ -355,22 +423,20 @@ var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results
 });
 
 // Limit the throttled permutations to 10 top scorers.
-var topResultSetsOverTime = map(sortedResultSetsOverTime, function (results) {
+var topContactSetsOverTime = map(sortedResultSetsOverTime, function (results) {
   return results.length > 10 ? slice(results, 0, 10) : results;
 });
 
-// [[result...]...] -> [[contact...]...]
-var contactSetsOverTime = map(topResultSetsOverTime, liftMap(i0));
-
 // [[contact...]...] -> [[string...]...]
-var contactSetHtmlStringsOverTime = map(contactSetsOverTime, liftMap(mapContactToHtmlString));
+var contactSetHtmlStringsOverTime = map(topContactSetsOverTime, liftMap(mapContactToHtmlString));
 
 // [[string...]...] -> [string...]
 var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrings) {
   return fold(htmlStrings, stringConcatFolder, '');
 });
 
-var countsOverTime = map(topResultSetsOverTime, function (results) {
+// [[result...]...] -> [Number...]
+var countsOverTime = map(topContactSetsOverTime, function (results) {
   return results.length;
 });
 
@@ -381,17 +447,18 @@ var moreTextOverTime = map(moreCountsOverTime, function (number) {
 });
 
 var completionsEl = document.getElementById('dialer-completions');
-var resultEl = document.getElementById('dialer-result');
+var contactEl = document.getElementById('dialer-contact');
 var completionsToggleEl = document.getElementById('dialer-completions-toggle');
+var dialerCardEl = document.getElementById('dialer-card');
 
 fold(countsOverTime, function (count, completionsToggleEl) {
-  completionsEl.classList.remove('dialer-completions-open');
+  if(count < 2) completionsEl.classList.remove('dialer-completions-open');
   return setStyle(completionsToggleEl, 'display', (count > 1 ? 'block' : 'none'));
 }, completionsToggleEl);
 
 fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
-fold(displayValuesOverTime, setInnerHtmlFolder, resultEl);
+fold(displayValuesOverTime, setInnerHtmlFolder, contactEl);
 
 fold(resultsHtmlOverTime, setInnerHtmlFolder, completionsEl);
 
@@ -402,3 +469,14 @@ fold(completionsToggleTapsOverTime, function(event, completionsEl) {
 
   return completionsEl;
 }, completionsEl);
+
+fold(dialAndDisconnectTapsOverTime, function (event, dialerCardEl) {
+  event.preventDefault();
+  if(hasClass(event.target, 'dialer-dial')) {
+    dialerCardEl.classList.add('dialer-card-flipped');
+  }
+  else if(hasClass(event.target, 'dialer-disconnect')) {
+    dialerCardEl.classList.remove('dialer-card-flipped');
+  }
+  return dialerCardEl;
+}, dialerCardEl);
