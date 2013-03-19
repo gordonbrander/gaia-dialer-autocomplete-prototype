@@ -212,6 +212,26 @@ module.exports = geneology;
 
 var reducer = require("./reducer")
 
+var map = reducer(function map(f, next, value, result) {
+  /**
+  Returns transformed version of given `source` where each item of it
+  is mapped using `f`.
+
+  ## Example
+
+  var data = [{ name: "foo" }, { name: "bar" }]
+  var names = map(data, function(value) { return value.name })
+  print(names) // => < "foo" "bar" >
+  **/
+  next(f(value), result)
+})
+
+module.exports = map
+
+},{"./reducer":9}],10:[function(require,module,exports){"use strict";
+
+var reducer = require("./reducer")
+
 var filter = reducer(function filter(predicate, next, value, result) {
   /**
   Composes filtered version of given `source`, such that only items contained
@@ -229,26 +249,6 @@ var filter = reducer(function filter(predicate, next, value, result) {
 })
 
 module.exports = filter
-
-},{"./reducer":9}],10:[function(require,module,exports){"use strict";
-
-var reducer = require("./reducer")
-
-var map = reducer(function map(f, next, value, result) {
-  /**
-  Returns transformed version of given `source` where each item of it
-  is mapped using `f`.
-
-  ## Example
-
-  var data = [{ name: "foo" }, { name: "bar" }]
-  var names = map(data, function(value) { return value.name })
-  print(names) // => < "foo" "bar" >
-  **/
-  next(f(value), result)
-})
-
-module.exports = map
 
 },{"./reducer":9}],11:[function(require,module,exports){"use strict";
 
@@ -276,7 +276,7 @@ function expand(source, f) {
 
 module.exports = expand
 
-},{"./merge":12,"./map":10}],13:[function(require,module,exports){/* This Source Code Form is subject to the terms of the Mozilla Public
+},{"./merge":12,"./map":8}],13:[function(require,module,exports){/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -299,6 +299,7 @@ var merge = require('reducers/merge');
 var reductions = require('reducers/reductions');
 var concat = require('reducers/concat');
 var expand = require('reducers/expand');
+var dropWhile = require('reducers/drop-while');
 var print = require('reducers/debug/print');
 
 var open = require('dom-reduce/event');
@@ -393,6 +394,10 @@ function mapContactToNameAndNumberHtmlString(contact) {
   // Title and subtitle
   var subtitle = contact.tel.replace(contact.pattern, '<b>$1</b>');
   return '<li class="dialer-completion" data-tel="' + contact.tel + '"><b class="title">' + contact.name + '</b> <div class="subtitle">' + subtitle + '</div></li>';
+}
+
+function makeAddAsContactHtmlString(value) {
+  return '<li class="dialer-add-as-contact">Add to contacts</li>';
 }
 
 function extend(obj/* obj1, obj2, objN */) {
@@ -560,10 +565,13 @@ function stringConcatFolder(string, result) {
   return result + string;
 }
 
+var ESCAPE_PATTERN = /[\.\?\*\+\^\$\|\(\)\{\[\]\\]/g
+function replaceRegexSpecialCharsWithSpace(string) {
+  return string.replace(ESCAPE_PATTERN, ' ');
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
-
-var fpsStream = fps(20);
 
 var dialpadEl = document.getElementById('dialer-dialpad');
 var tapsOverTime = open(document.documentElement, isTouchSupport() ? 'touchstart' : 'click');
@@ -646,7 +654,11 @@ var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
   return [];
 });
 
-var patternsOverTime = map(emptiesVsQueriesOverTime[1], function (value) {
+// By replacing regex special characters with a space character, we make sure
+// that no number matches.
+var escapedQueriesOverTime = map(emptiesVsQueriesOverTime[1], replaceRegexSpecialCharsWithSpace);
+
+var patternsOverTime = map(escapedQueriesOverTime, function (value) {
   return Pattern(value);
 });
 
@@ -702,11 +714,23 @@ var resultSetReductionsOverTime = reductions(everythingOverTime, function (accum
   return isSOQ(thing) ? [] : accumulated.concat([thing]);
 }, []);
 
-// We don't need to sample the rolling buffer more than 20fps.
-var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fpsStream));
+// Sample the result reductions 20 times per second. This lets us quickly update the list
+// as new results come in.
+var throttledResultSetsOverTime = dropRepeats(sample(resultSetReductionsOverTime, fps(30)));
+
+// Drop the first empty result set. Because of the way reductions are
+// accumulated, the first accumulation always ends up being empty.
+// This causes problems down the line, where you see the "add as contact" flash
+// for just a second after typing the first number.
+//
+// Dropping the empy value fixes the problem. Ideally, would be great to fix
+// this upstream somehow.
+var patchedThrottledResultSetsOverTime = dropWhile(throttledResultSetsOverTime, function (results) {
+  return results.length === 0;
+});
 
 // sort the throttled permutations.
-var sortedResultSetsOverTime = map(throttledResultSetsOverTime, function(results) {
+var sortedResultSetsOverTime = map(patchedThrottledResultSetsOverTime, function(results) {
   return results.length > 0 ? sort(results, compareGrepScores) : results;
 });
 
@@ -721,6 +745,13 @@ var contactSetHtmlStringsOverTime = map(topContactSetsOverTime, liftMap(mapConta
 // [[string...]...] -> [string...]
 var resultsHtmlOverTime = map(contactSetHtmlStringsOverTime, function (htmlStrings) {
   return fold(htmlStrings, stringConcatFolder, '');
+});
+
+var completionsHtmlOverTime = sample(valuesOverTime, resultsHtmlOverTime, function (value, resultsHtml) {
+  // If results HTML is empty and value is not, that means we didn't get back
+  // any results from our query. Instead of rendering an empty string, render
+  // the "add as contact" block.
+  return isOnlyWhitespace(resultsHtml) && !isOnlyWhitespace(value) ? makeAddAsContactHtmlString(value) : resultsHtml;
 });
 
 // [[result...]...] -> [Number...]
@@ -748,10 +779,10 @@ fold(moreTextOverTime, setInnerHtmlFolder, completionsToggleEl);
 
 fold(displayValuesOverTime, setInnerHtmlFolder, contactEl);
 
-fold(resultsHtmlOverTime, setInnerHtmlFolder, completionsEl);
+fold(completionsHtmlOverTime, setInnerHtmlFolder, completionsEl);
 
 fold(completionsToggleTapsOverTime, function(event, completionsEl) {
-  var x = hasClass(completionsEl, 'dialer-completions-open') ?
+  hasClass(completionsEl, 'dialer-completions-open') ?
     completionsEl.classList.remove('dialer-completions-open') :
     completionsEl.classList.add('dialer-completions-open');
 
@@ -769,7 +800,7 @@ fold(dialAndDisconnectTapsOverTime, function (event, dialerCardEl) {
   return dialerCardEl;
 }, dialerCardEl);
 
-},{"./data/contacts.json":1,"./fps-reduce.js":3,"./geneology-reduce.js":6,"reducers/fold":14,"reducers/filter":8,"reducers/map":10,"reducers/merge":12,"reducers/reductions":15,"reducers/concat":16,"reducers/expand":11,"reducers/debug/print":17,"dom-reduce/event":18,"sample/sample":19,"coreduction/coreduction":20,"transducer/drop-repeats":21,"grep-reduce/grep":22,"functional/compose":2,"zip-reduce":23,"pattern-exp":24}],25:[function(require,module,exports){var events = require('events');
+},{"./data/contacts.json":1,"./fps-reduce.js":3,"./geneology-reduce.js":6,"reducers/fold":14,"reducers/filter":10,"reducers/map":8,"reducers/merge":12,"reducers/reductions":15,"reducers/concat":16,"reducers/expand":11,"reducers/drop-while":17,"reducers/debug/print":18,"dom-reduce/event":19,"sample/sample":20,"coreduction/coreduction":21,"transducer/drop-repeats":22,"grep-reduce/grep":23,"functional/compose":2,"zip-reduce":24,"pattern-exp":25}],26:[function(require,module,exports){var events = require('events');
 
 exports.isArray = isArray;
 exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
@@ -1121,11 +1152,11 @@ exports.format = function(f) {
   return str;
 };
 
-},{"events":26}],7:[function(require,module,exports){"use strict";
+},{"events":27}],7:[function(require,module,exports){"use strict";
 
 module.exports = String("End of the collection")
 
-},{}],24:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{}],25:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true*/
 
@@ -1228,7 +1259,7 @@ function fold(source, next, initial) {
 
 module.exports = fold
 
-},{"reducible/reduce":27,"reducible/is-error":28,"reducible/is-reduced":5,"reducible/end":7,"eventual/type":29,"eventual/deliver":30,"eventual/defer":31,"eventual/when":32}],12:[function(require,module,exports){"use strict";
+},{"reducible/reduce":28,"reducible/is-error":29,"reducible/is-reduced":5,"reducible/end":7,"eventual/type":30,"eventual/deliver":31,"eventual/defer":32,"eventual/when":33}],12:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1279,7 +1310,7 @@ function merge(source) {
 
 module.exports = merge
 
-},{"reducible/reducible":4,"reducible/reduce":27,"reducible/is-error":28,"reducible/end":7}],15:[function(require,module,exports){"use strict";
+},{"reducible/reduce":28,"reducible/end":7,"reducible/reducible":4,"reducible/is-error":29}],15:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1311,7 +1342,7 @@ function reductions(source, f, initial) {
 
 module.exports = reductions
 
-},{"reducible/reduce":27,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":28}],16:[function(require,module,exports){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":29}],16:[function(require,module,exports){"use strict";
 
 var reducible = require("reducible/reducible")
 var reduce = require("reducible/reduce")
@@ -1349,7 +1380,47 @@ function concat(left, right /*, ...rest*/) {
 
 module.exports = concat
 
-},{"reducible/reducible":4,"reducible/reduce":27,"reducible/end":7}],18:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{"reducible/reducible":4,"reducible/reduce":28,"reducible/end":7}],17:[function(require,module,exports){"use strict";
+
+var reducible = require("reducible/reducible")
+var reduce = require("reducible/reduce")
+var isError = require("reducible/is-error")
+var end = require("reducible/end")
+
+function dropWhile(source, predicate) {
+  /**
+  Returns a sequence of the items in `source` starting from the first
+  item for which `predicate(item)` returns `false`.
+
+  ## Example
+
+  var numbers = dropWhile([ 2, 7, 10, 23 ], function(value) {
+    return value < 10
+  })
+  print(numbers)   // => < 10 23 >
+  **/
+  return reducible(function reduceDropWhile(next, initial) {
+    var dropped = false
+    reduce(source, function reduceDropWhileSource(value, result) {
+      // If value is end of collection or is an error (which also includes
+      // end of collection) just pass it through, `reducible` will take care
+      // of everything.
+      if (value === end) return next(value, result)
+      if (isError(value)) return next(value, result)
+
+      // If already dropped all the intended items (if `dropped` is already
+      // being set to `true` or if current predicate returns `false`). Then
+      // just keep on passing values.
+      if (dropped || (dropped = !predicate(value))) return next(value, result)
+
+      return result
+    }, initial)
+  })
+}
+
+module.exports = dropWhile
+
+},{"reducible/reducible":4,"reducible/reduce":28,"reducible/end":7,"reducible/is-error":29}],19:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true */
 
@@ -1389,7 +1460,87 @@ function open(target, type, options) {
 
 module.exports = open
 
-},{"reducible/reducible":4,"reducible/is-reduced":5}],4:[function(require,module,exports){(function(){"use strict";
+},{"reducible/reducible":4,"reducible/is-reduced":5}],20:[function(require,module,exports){"use strict";
+
+var reduce = require("reducible/reduce")
+var reducible = require("reducible/reducible")
+var reduced = require("reducible/reduced")
+var end = require("reducible/end")
+var isReduced = require("reducible/is-reduced")
+var isError = require("reducible/is-error")
+
+function sample(input, trigger, assemble) {
+  /**
+  Returns reducible signal of samples from the `input` every time an event
+  occurs on the `trigger`. For example, `sample(position, clicks)` will return
+  reducible collections of positions at a time of clicks. Result ends when
+  either `input` or `trigger` ends. Optionally `assemble` function may be
+  passed as a third argument, in which case it will be invoked at every sample
+  with value from `input` and `trigger` and expected to return assembled
+  sample.
+  **/
+
+  var isAssembler = typeof(assemble) === "function"
+  return reducible(function reduceSampled(next, initial) {
+    var result              // storage for result of accumulation
+    var lastInput           // last value yielded by input
+    var lastTrigger         // last value yield by trigger
+    var started = false     // weather `input` already started.
+    var triggered = false   // weather `trigger` already started.
+    var state = initial     // currently accumulated state
+
+    function reducer(isInput) {
+      var isTrigger = !isInput
+      return function reduceSampleSource(value) {
+        // If result is already set by either of reducibles, it's either ended,
+        // errored or consumed. In such case `reduced` state is stored in the
+        // result, returning which signals source to stop.
+        if (result) return result
+        // If `end` or error value is yield store result and pass value down
+        // the flow so that error / end can be handled.
+        if (value === end || isError(value)) {
+          next(value, state)
+          result = reduced(state)
+          return result
+        }
+
+        // If value from input update last one otherwise update last triggered
+        // value only if it's assembler, otherwise it's pointless and will only
+        // keep reference longer for no reason.
+        if (isInput) lastInput = value
+        else if (isAssembler) lastTrigger = value
+
+        var isFirstInputOnTriggered = isInput && !started && triggered
+        var isTriggerOnStarted = isTrigger && started
+
+        // Mark appropriate source as started.
+        if (isInput) started = true
+        else triggered = true
+
+        // If input value is yield after trigger has started or if
+        // trigger yields after input started pass value down the flow
+        // and accumulate new state.
+        if (isFirstInputOnTriggered || isTriggerOnStarted) {
+          var item = isAssembler ? assemble(lastInput, lastTrigger) : lastInput
+          state = next(item, state)
+          // If reduction is complete store result to stop another reduction
+          // source.
+          if (isReduced(state)) result = state
+        }
+
+        // Return state, so that in case if it is `reduced` will stop source.
+        return state
+      }
+    }
+
+    reduce(trigger, reducer(false))
+    reduce(input, reducer(true))
+  })
+}
+
+module.exports = sample
+
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/reduced":34,"reducible/end":7,"reducible/is-reduced":5,"reducible/is-error":29}],4:[function(require,module,exports){(function(){"use strict";
 
 var reduce = require("./reduce")
 var end = require("./end")
@@ -1478,7 +1629,7 @@ reducible.type = Reducible
 module.exports = reducible
 
 })()
-},{"./reduce":27,"./end":7,"./is-error":28,"./is-reduced":5,"./reduced":33}],5:[function(require,module,exports){"use strict";
+},{"./reduce":28,"./end":7,"./is-error":29,"./is-reduced":5,"./reduced":34}],5:[function(require,module,exports){"use strict";
 
 var reduced = require("./reduced")
 
@@ -1488,87 +1639,7 @@ function isReduced(value) {
 
 module.exports = isReduced
 
-},{"./reduced":33}],19:[function(require,module,exports){"use strict";
-
-var reduce = require("reducible/reduce")
-var reducible = require("reducible/reducible")
-var reduced = require("reducible/reduced")
-var end = require("reducible/end")
-var isReduced = require("reducible/is-reduced")
-var isError = require("reducible/is-error")
-
-function sample(input, trigger, assemble) {
-  /**
-  Returns reducible signal of samples from the `input` every time an event
-  occurs on the `trigger`. For example, `sample(position, clicks)` will return
-  reducible collections of positions at a time of clicks. Result ends when
-  either `input` or `trigger` ends. Optionally `assemble` function may be
-  passed as a third argument, in which case it will be invoked at every sample
-  with value from `input` and `trigger` and expected to return assembled
-  sample.
-  **/
-
-  var isAssembler = typeof(assemble) === "function"
-  return reducible(function reduceSampled(next, initial) {
-    var result              // storage for result of accumulation
-    var lastInput           // last value yielded by input
-    var lastTrigger         // last value yield by trigger
-    var started = false     // weather `input` already started.
-    var triggered = false   // weather `trigger` already started.
-    var state = initial     // currently accumulated state
-
-    function reducer(isInput) {
-      var isTrigger = !isInput
-      return function reduceSampleSource(value) {
-        // If result is already set by either of reducibles, it's either ended,
-        // errored or consumed. In such case `reduced` state is stored in the
-        // result, returning which signals source to stop.
-        if (result) return result
-        // If `end` or error value is yield store result and pass value down
-        // the flow so that error / end can be handled.
-        if (value === end || isError(value)) {
-          next(value, state)
-          result = reduced(state)
-          return result
-        }
-
-        // If value from input update last one otherwise update last triggered
-        // value only if it's assembler, otherwise it's pointless and will only
-        // keep reference longer for no reason.
-        if (isInput) lastInput = value
-        else if (isAssembler) lastTrigger = value
-
-        var isFirstInputOnTriggered = isInput && !started && triggered
-        var isTriggerOnStarted = isTrigger && started
-
-        // Mark appropriate source as started.
-        if (isInput) started = true
-        else triggered = true
-
-        // If input value is yield after trigger has started or if
-        // trigger yields after input started pass value down the flow
-        // and accumulate new state.
-        if (isFirstInputOnTriggered || isTriggerOnStarted) {
-          var item = isAssembler ? assemble(lastInput, lastTrigger) : lastInput
-          state = next(item, state)
-          // If reduction is complete store result to stop another reduction
-          // source.
-          if (isReduced(state)) result = state
-        }
-
-        // Return state, so that in case if it is `reduced` will stop source.
-        return state
-      }
-    }
-
-    reduce(trigger, reducer(false))
-    reduce(input, reducer(true))
-  })
-}
-
-module.exports = sample
-
-},{"reducible/reduce":27,"reducible/reducible":4,"reducible/reduced":33,"reducible/end":7,"reducible/is-reduced":5,"reducible/is-error":28}],20:[function(require,module,exports){"use strict";
+},{"./reduced":34}],21:[function(require,module,exports){"use strict";
 
 var reducible = require("reducible/reducible")
 var reduced = require("reducible/reduced")
@@ -1635,7 +1706,7 @@ function coreduction(left, right, assemble) {
 
 module.exports = coreduction
 
-},{"reducible/reducible":4,"reducible/reduced":33,"reducible/end":7,"reducible/is-error":28,"reducible/is-reduced":5,"reducible/reduce":27}],21:[function(require,module,exports){"use strict";
+},{"reducible/reducible":4,"reducible/reduced":34,"reducible/end":7,"reducible/is-error":29,"reducible/is-reduced":5,"reducible/reduce":28}],22:[function(require,module,exports){"use strict";
 
 var reductions = require("reducers/reductions")
 var filter = require("reducers/filter")
@@ -1678,7 +1749,7 @@ function dropRepeats(input, assert) {
 
 module.exports = dropRepeats
 
-},{"reducers/reductions":15,"reducers/filter":8,"reducers/map":10}],34:[function(require,module,exports){// shim for using process in browser
+},{"reducers/reductions":15,"reducers/filter":10,"reducers/map":8}],35:[function(require,module,exports){// shim for using process in browser
 
 var process = module.exports = {};
 
@@ -1731,7 +1802,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],26:[function(require,module,exports){(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
+},{}],27:[function(require,module,exports){(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
 var isArray = typeof Array.isArray === 'function'
@@ -1916,7 +1987,7 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":34}],28:[function(require,module,exports){"use strict";
+},{"__browserify_process":35}],29:[function(require,module,exports){"use strict";
 
 var stringifier = Object.prototype.toString
 
@@ -1926,7 +1997,7 @@ function isError(value) {
 
 module.exports = isError
 
-},{}],33:[function(require,module,exports){"use strict";
+},{}],34:[function(require,module,exports){"use strict";
 
 
 // Exported function can be used for boxing values. This boxing indicates
@@ -1942,7 +2013,7 @@ function reduced(value) {
 
 module.exports = reduced
 
-},{}],17:[function(require,module,exports){(function(process){"use strict";
+},{}],18:[function(require,module,exports){(function(process){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1989,7 +2060,7 @@ function print(source) {
 module.exports = print
 
 })(require("__browserify_process"))
-},{"util":25,"reducible/reduce":27,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":28,"__browserify_process":34}],35:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{"util":26,"reducible/reduce":28,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":29,"__browserify_process":35}],36:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true*/
 
@@ -2018,7 +2089,7 @@ score.make = Calculator
 
 module.exports = score
 
-},{}],30:[function(require,module,exports){"use strict";
+},{}],31:[function(require,module,exports){"use strict";
 
 // Anyone crating an eventual will likely need to realize it, requiring
 // dependency on other package is complicated, not to mention that one
@@ -2026,14 +2097,14 @@ module.exports = score
 // well with each other. Exposing this solves the issues.
 module.exports = require("pending/deliver")
 
-},{"pending/deliver":36}],31:[function(require,module,exports){"use strict";
+},{"pending/deliver":37}],32:[function(require,module,exports){"use strict";
 
 var Eventual = require("./type")
 var defer = function defer() { return new Eventual() }
 
 module.exports = defer
 
-},{"./type":29}],9:[function(require,module,exports){(function(process){"use strict";
+},{"./type":30}],9:[function(require,module,exports){(function(process){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -2086,7 +2157,7 @@ function reducer(process) {
 module.exports = reducer
 
 })(require("__browserify_process"))
-},{"reducible/reduce":27,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":28,"__browserify_process":34}],22:[function(require,module,exports){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/is-error":29,"reducible/end":7,"__browserify_process":35}],23:[function(require,module,exports){"use strict";
 
 var filter = require("reducers/filter")
 var map = require("reducers/map")
@@ -2117,7 +2188,7 @@ function grep(pattern, data, serialize) {
 
 module.exports = grep
 
-},{"reducers/filter":8,"reducers/map":10,"match-score":35,"pattern-exp":24}],23:[function(require,module,exports){"use strict";
+},{"reducers/filter":10,"reducers/map":8,"match-score":36,"pattern-exp":25}],24:[function(require,module,exports){"use strict";
 
 var accumulate = require("reducible/reduce")
 var reduced = require("reducible/reduced")
@@ -2222,7 +2293,7 @@ function zip(left, right/*, ...rest*/) {
 
 module.exports = zip
 
-},{"reducible/reduce":27,"reducible/reduced":33,"reducible/is-reduced":5,"reducible/is-error":28,"reducible/end":7,"reducers/map":10}],29:[function(require,module,exports){(function(){"use strict";
+},{"reducible/reduce":28,"reducible/reduced":34,"reducible/is-reduced":5,"reducible/is-error":29,"reducible/end":7,"reducers/map":8}],30:[function(require,module,exports){(function(){"use strict";
 
 var watchers = require("watchables/watchers")
 var watch = require("watchables/watch")
@@ -2381,7 +2452,7 @@ when.define(Eventual, function(value, onRealize, onError) {
 module.exports = Eventual
 
 })()
-},{"pending/await":37,"pending/is":38,"./deliver":30,"./when":32,"watchables/watchers":39,"watchables/watch":40}],27:[function(require,module,exports){"use strict";
+},{"pending/await":38,"pending/is":39,"./deliver":31,"./when":33,"watchables/watchers":40,"watchables/watch":41}],28:[function(require,module,exports){"use strict";
 
 var method = require("method")
 
@@ -2441,7 +2512,7 @@ reduce.define(reduce.singular)
 reduce.define(Error, function(error, next) { next(error) })
 module.exports = reduce
 
-},{"./is-reduced":5,"./is-error":28,"./end":7,"method":41}],32:[function(require,module,exports){"use strict";
+},{"./is-reduced":5,"./is-error":29,"./end":7,"method":42}],33:[function(require,module,exports){"use strict";
 
 var method = require("method")
 var when = method("when")
@@ -2455,7 +2526,7 @@ when.define(Error, function(error, onRealize, onError) {
 
 module.exports = when
 
-},{"method":41}],41:[function(require,module,exports){"use strict";
+},{"method":42}],42:[function(require,module,exports){"use strict";
 
 var defineProperty = Object.defineProperty || function(object, name, property) {
   object[name] = property.value
@@ -2681,7 +2752,7 @@ Method.host = host
 
 module.exports = Method
 
-},{}],40:[function(require,module,exports){"use strict";
+},{}],41:[function(require,module,exports){"use strict";
 
 var method = require("method")
 var watchers = require("./watchers")
@@ -2697,16 +2768,7 @@ watch.define(function(value, watcher) {
 
 module.exports = watch
 
-},{"./watchers":39,"method":41}],39:[function(require,module,exports){"use strict";
-
-var method = require("method")
-
-// Method is supposed to return array of watchers for the given
-// value.
-var watchers = method("watchers")
-module.exports = watchers
-
-},{"method":41}],37:[function(require,module,exports){"use strict";
+},{"./watchers":40,"method":42}],38:[function(require,module,exports){"use strict";
 
 var method = require("method")
 
@@ -2717,7 +2779,7 @@ await.define(function(value, callback) { callback(value) })
 
 module.exports = await
 
-},{"method":41}],38:[function(require,module,exports){"use strict";
+},{"method":42}],39:[function(require,module,exports){"use strict";
 
 var method = require("method")
 
@@ -2730,7 +2792,16 @@ isPending.define(function() { return false })
 
 module.exports = isPending
 
-},{"method":41}],36:[function(require,module,exports){"use strict";
+},{"method":42}],40:[function(require,module,exports){"use strict";
+
+var method = require("method")
+
+// Method is supposed to return array of watchers for the given
+// value.
+var watchers = method("watchers")
+module.exports = watchers
+
+},{"method":42}],37:[function(require,module,exports){"use strict";
 
 var method = require("method")
 // Method delivers pending value.
@@ -2738,4 +2809,4 @@ var deliver = method("deliver")
 
 module.exports = deliver
 
-},{"method":41}]},{},[13]);
+},{"method":42}]},{},[13]);
