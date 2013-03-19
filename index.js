@@ -282,6 +282,11 @@ function stringConcatFolder(string, result) {
   return result + string;
 }
 
+var ESCAPE_PATTERN = /[\.\?\*\+\^\$\|\(\)\{\[\]\\]/g
+function replaceRegexSpecialCharsWithSpace(string) {
+  return string.replace(ESCAPE_PATTERN, ' ');
+}
+
 // Control flow logic
 // ----------------------------------------------------------------------------
 
@@ -368,7 +373,11 @@ var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
   return [];
 });
 
-var patternsOverTime = map(emptiesVsQueriesOverTime[1], function (value) {
+// By replacing regex special characters with a space character, we make sure
+// that no number matches.
+var escapedQueriesOverTime = map(emptiesVsQueriesOverTime[1], replaceRegexSpecialCharsWithSpace);
+
+var patternsOverTime = map(escapedQueriesOverTime, function (value) {
   return Pattern(value);
 });
 
