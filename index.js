@@ -308,7 +308,7 @@ var completionsToggleTapsOverTime = filter(tapsOverTime, function isEventTargetF
   return hasClass(event.target, 'dialer-completions-toggle');
 });
 
-var submitTapsOverTime = filter(tapsOverTime, function filterSubmitTaps(event) {
+var dialTapsOverTime = filter(tapsOverTime, function filterSubmitTaps(event) {
   // Filter a stream of taps on the 'dial' element.
   return hasClass(event.target, 'dialer-dial');
 });
@@ -317,6 +317,8 @@ var disconnectTapsOverTime = filter(tapsOverTime, function filterDisconnectTaps(
   // Filter a stream of taps on the 'disconnect' element.
   return hasClass(event.target, 'dialing-disconnect');
 });
+
+var dialAndDisconnectTapsOverTime = merge([disconnectTapsOverTime, dialTapsOverTime]);
 
 var disconnectSOQsOverTime = map(disconnectTapsOverTime, SOQ);
 
@@ -468,8 +470,7 @@ fold(completionsToggleTapsOverTime, function(event, completionsEl) {
   return completionsEl;
 }, completionsEl);
 
-fold(submitTapsOverTime, function (event, dialingEl) {
+fold(dialAndDisconnectTapsOverTime, function (event, dialingEl) {
   event.preventDefault();
-  setStyle(dialingEl, 'display', 'block');
-  return dialingEl;
+  return setStyle(dialingEl, 'display', hasClass(event.target, 'dialer-dial') ? 'block' : 'none');
 }, dialingEl);
