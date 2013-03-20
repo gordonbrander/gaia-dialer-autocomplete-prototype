@@ -382,7 +382,7 @@ var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
 var escapedQueriesOverTime = map(emptiesVsQueriesOverTime[1], replaceRegexSpecialCharsWithSpace);
 
 var patternsOverTime = map(escapedQueriesOverTime, function (value) {
-  return Pattern(value);
+  return Pattern('^' + value);
 });
 
 // [value...] -> [[value, [result...]]...]
