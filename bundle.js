@@ -660,7 +660,7 @@ var emptyResultSetsOverTime = map(emptiesVsQueriesOverTime[0], function () {
 var escapedQueriesOverTime = map(emptiesVsQueriesOverTime[1], replaceRegexSpecialCharsWithSpace);
 
 var patternsOverTime = map(escapedQueriesOverTime, function (value) {
-  return Pattern(value);
+  return Pattern('^' + value);
 });
 
 // [value...] -> [[value, [result...]]...]
@@ -801,7 +801,7 @@ fold(dialAndDisconnectTapsOverTime, function (event, dialerCardEl) {
   return dialerCardEl;
 }, dialerCardEl);
 
-},{"./data/contacts.json":1,"./fps-reduce.js":3,"./geneology-reduce.js":6,"reducers/fold":14,"reducers/filter":8,"reducers/map":10,"reducers/merge":12,"reducers/reductions":15,"reducers/concat":16,"reducers/expand":11,"reducers/drop-while":17,"reducers/debug/print":18,"dom-reduce/event":19,"sample/sample":20,"coreduction/coreduction":21,"transducer/drop-repeats":22,"grep-reduce/grep":23,"functional/compose":2,"pattern-exp":24,"zip-reduce":25}],26:[function(require,module,exports){var events = require('events');
+},{"./data/contacts.json":1,"./fps-reduce.js":3,"./geneology-reduce.js":6,"reducers/fold":14,"reducers/filter":8,"reducers/map":10,"reducers/merge":12,"reducers/reductions":15,"reducers/concat":16,"reducers/expand":11,"reducers/drop-while":17,"reducers/debug/print":18,"dom-reduce/event":19,"sample/sample":20,"coreduction/coreduction":21,"transducer/drop-repeats":22,"grep-reduce/grep":23,"functional/compose":2,"zip-reduce":24,"pattern-exp":25}],26:[function(require,module,exports){var events = require('events');
 
 exports.isArray = isArray;
 exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
@@ -1157,7 +1157,7 @@ exports.format = function(f) {
 
 module.exports = String("End of the collection")
 
-},{}],24:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{}],25:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true*/
 
@@ -1541,7 +1541,7 @@ function sample(input, trigger, assemble) {
 
 module.exports = sample
 
-},{"reducible/reduce":28,"reducible/reducible":4,"reducible/reduced":34,"reducible/end":7,"reducible/is-reduced":5,"reducible/is-error":29}],4:[function(require,module,exports){(function(){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/reduced":34,"reducible/end":7,"reducible/is-error":29,"reducible/is-reduced":5}],4:[function(require,module,exports){(function(){"use strict";
 
 var reduce = require("./reduce")
 var end = require("./end")
@@ -2189,7 +2189,7 @@ function grep(pattern, data, serialize) {
 
 module.exports = grep
 
-},{"reducers/filter":8,"reducers/map":10,"match-score":36,"pattern-exp":24}],25:[function(require,module,exports){"use strict";
+},{"reducers/filter":8,"reducers/map":10,"match-score":36,"pattern-exp":25}],24:[function(require,module,exports){"use strict";
 
 var accumulate = require("reducible/reduce")
 var reduced = require("reducible/reduced")
@@ -2789,14 +2789,6 @@ await.define(function(value, callback) { callback(value) })
 
 module.exports = await
 
-},{"method":42}],37:[function(require,module,exports){"use strict";
-
-var method = require("method")
-// Method delivers pending value.
-var deliver = method("deliver")
-
-module.exports = deliver
-
 },{"method":42}],39:[function(require,module,exports){"use strict";
 
 var method = require("method")
@@ -2809,5 +2801,13 @@ var isPending = method("is-pending")
 isPending.define(function() { return false })
 
 module.exports = isPending
+
+},{"method":42}],37:[function(require,module,exports){"use strict";
+
+var method = require("method")
+// Method delivers pending value.
+var deliver = method("deliver")
+
+module.exports = deliver
 
 },{"method":42}]},{},[13]);
