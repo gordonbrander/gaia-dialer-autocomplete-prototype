@@ -1,5 +1,9 @@
 [
   {
+    "name":"Bill Smith",
+    "tel":"(415) 232-9137"
+  },
+  {
     "name":"Matt Helm",
     "tel":"(503) 177-2938"
   },
@@ -122,6 +126,10 @@
   {
     "name":"Mortadelo Pi",
     "tel":"(647) 018-7675"
+  },
+  {
+    "name": "Linda Branson",
+    "tel":"(415) 370-3333"
   },
   {
     "name":"Filemón Pi",
