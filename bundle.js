@@ -1,5 +1,9 @@
 ;(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){module.exports=[
   {
+    "name":"Bill Smith",
+    "tel":"(415) 232-9137"
+  },
+  {
     "name":"Matt Helm",
     "tel":"(503) 177-2938"
   },
@@ -122,6 +126,10 @@
   {
     "name":"Mortadelo Pi",
     "tel":"(647) 018-7675"
+  },
+  {
+    "name": "Linda Branson",
+    "tel":"(415) 370-3333"
   },
   {
     "name":"Filemón Pi",
@@ -1311,7 +1319,7 @@ function merge(source) {
 
 module.exports = merge
 
-},{"reducible/reduce":28,"reducible/reducible":4,"reducible/end":7,"reducible/is-error":29}],15:[function(require,module,exports){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/is-error":29,"reducible/end":7}],15:[function(require,module,exports){"use strict";
 
 var reduce = require("reducible/reduce")
 var reducible = require("reducible/reducible")
@@ -1421,7 +1429,7 @@ function dropWhile(source, predicate) {
 
 module.exports = dropWhile
 
-},{"reducible/reducible":4,"reducible/reduce":28,"reducible/is-error":29,"reducible/end":7}],19:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
+},{"reducible/reducible":4,"reducible/reduce":28,"reducible/end":7,"reducible/is-error":29}],19:[function(require,module,exports){/* vim:set ts=2 sw=2 sts=2 expandtab */
 /*jshint asi: true undef: true es5: true node: true browser: true devel: true
          forin: true latedef: false globalstrict: true */
 
@@ -1541,7 +1549,7 @@ function sample(input, trigger, assemble) {
 
 module.exports = sample
 
-},{"reducible/reduce":28,"reducible/reducible":4,"reducible/reduced":34,"reducible/end":7,"reducible/is-error":29,"reducible/is-reduced":5}],4:[function(require,module,exports){(function(){"use strict";
+},{"reducible/reduce":28,"reducible/reducible":4,"reducible/reduced":34,"reducible/end":7,"reducible/is-reduced":5,"reducible/is-error":29}],4:[function(require,module,exports){(function(){"use strict";
 
 var reduce = require("./reduce")
 var end = require("./end")
@@ -1630,7 +1638,7 @@ reducible.type = Reducible
 module.exports = reducible
 
 })()
-},{"./reduce":28,"./end":7,"./is-error":29,"./is-reduced":5,"./reduced":34}],5:[function(require,module,exports){"use strict";
+},{"./reduce":28,"./end":7,"./is-reduced":5,"./is-error":29,"./reduced":34}],5:[function(require,module,exports){"use strict";
 
 var reduced = require("./reduced")
 
